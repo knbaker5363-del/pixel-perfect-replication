@@ -161,32 +161,52 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          bio: string | null
           created_at: string | null
+          education_place: string | null
           full_name: string | null
           id: string
+          is_profile_public: boolean | null
           points: number | null
+          university_id: string | null
           updated_at: string | null
           user_id: string
         }
         Insert: {
           avatar_url?: string | null
+          bio?: string | null
           created_at?: string | null
+          education_place?: string | null
           full_name?: string | null
           id?: string
+          is_profile_public?: boolean | null
           points?: number | null
+          university_id?: string | null
           updated_at?: string | null
           user_id: string
         }
         Update: {
           avatar_url?: string | null
+          bio?: string | null
           created_at?: string | null
+          education_place?: string | null
           full_name?: string | null
           id?: string
+          is_profile_public?: boolean | null
           points?: number | null
+          university_id?: string | null
           updated_at?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_university_id_fkey"
+            columns: ["university_id"]
+            isOneToOne: false
+            referencedRelation: "universities"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       reviews: {
         Row: {
@@ -314,6 +334,8 @@ export type Database = {
           created_at: string | null
           id: string
           post_type: string | null
+          session_date: string | null
+          session_link: string | null
           subject_id: string
           teacher_id: string
           title: string
@@ -323,6 +345,8 @@ export type Database = {
           created_at?: string | null
           id?: string
           post_type?: string | null
+          session_date?: string | null
+          session_link?: string | null
           subject_id: string
           teacher_id: string
           title: string
@@ -332,6 +356,8 @@ export type Database = {
           created_at?: string | null
           id?: string
           post_type?: string | null
+          session_date?: string | null
+          session_link?: string | null
           subject_id?: string
           teacher_id?: string
           title?: string
@@ -446,6 +472,39 @@ export type Database = {
           },
         ]
       }
+      teacher_messages: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_read: boolean | null
+          message: string
+          student_id: string
+          subject: string
+          teacher_id: string
+          type: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          message: string
+          student_id: string
+          subject: string
+          teacher_id: string
+          type?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          message?: string
+          student_id?: string
+          subject?: string
+          teacher_id?: string
+          type?: string | null
+        }
+        Relationships: []
+      }
       todos: {
         Row: {
           completed: boolean | null
@@ -470,6 +529,33 @@ export type Database = {
           id?: string
           title?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      universities: {
+        Row: {
+          created_at: string | null
+          email_domain: string
+          id: string
+          is_active: boolean | null
+          name: string
+          require_email_verification: boolean | null
+        }
+        Insert: {
+          created_at?: string | null
+          email_domain: string
+          id?: string
+          is_active?: boolean | null
+          name: string
+          require_email_verification?: boolean | null
+        }
+        Update: {
+          created_at?: string | null
+          email_domain?: string
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          require_email_verification?: boolean | null
         }
         Relationships: []
       }

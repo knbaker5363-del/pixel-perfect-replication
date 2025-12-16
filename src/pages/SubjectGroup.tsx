@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Plus, Megaphone, FileText, BookOpen, Loader2, Trash2 } from 'lucide-react';
+import { ArrowLeft, Plus, Megaphone, FileText, BookOpen, Loader2, Trash2, Calendar, Link as LinkIcon, Copy } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -21,6 +21,8 @@ interface Post {
   post_type: string;
   created_at: string;
   teacher_id: string;
+  session_link?: string | null;
+  session_date?: string | null;
   profiles?: { full_name: string | null };
 }
 
@@ -44,6 +46,8 @@ export default function SubjectGroup() {
     title: '',
     content: '',
     post_type: 'update',
+    session_link: '',
+    session_date: '',
   });
 
   const isTeacher = hasRole('teacher');
@@ -129,20 +133,27 @@ export default function SubjectGroup() {
 
     setSubmitting(true);
     try {
+      const insertData: any = {
+        subject_id: id,
+        teacher_id: user.id,
+        title: newPost.title,
+        content: newPost.content,
+        post_type: newPost.post_type,
+      };
+      
+      if (newPost.post_type === 'schedule' && newPost.session_link) {
+        insertData.session_link = newPost.session_link;
+        insertData.session_date = newPost.session_date || null;
+      }
+
       const { error } = await supabase
         .from('subject_posts')
-        .insert({
-          subject_id: id,
-          teacher_id: user.id,
-          title: newPost.title,
-          content: newPost.content,
-          post_type: newPost.post_type,
-        });
+        .insert(insertData);
 
       if (error) throw error;
 
       toast.success(t.common.success);
-      setNewPost({ title: '', content: '', post_type: 'update' });
+      setNewPost({ title: '', content: '', post_type: 'update', session_link: '', session_date: '' });
       setShowForm(false);
       fetchSubjectAndPosts();
     } catch (error) {
@@ -176,6 +187,8 @@ export default function SubjectGroup() {
         return <Megaphone className="h-4 w-4" />;
       case 'resource':
         return <BookOpen className="h-4 w-4" />;
+      case 'schedule':
+        return <Calendar className="h-4 w-4" />;
       default:
         return <FileText className="h-4 w-4" />;
     }
@@ -187,6 +200,8 @@ export default function SubjectGroup() {
         return 'default';
       case 'resource':
         return 'secondary';
+      case 'schedule':
+        return 'destructive';
       default:
         return 'outline';
     }
@@ -270,9 +285,38 @@ export default function SubjectGroup() {
                     <SelectItem value="update">{t.groups.update}</SelectItem>
                     <SelectItem value="announcement">{t.groups.announcement}</SelectItem>
                     <SelectItem value="resource">{t.groups.resource}</SelectItem>
+                    <SelectItem value="schedule">{language === 'ar' ? 'جدول حصة' : 'Session Schedule'}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
+              {newPost.post_type === 'schedule' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium flex items-center gap-2">
+                      <LinkIcon className="h-4 w-4" />
+                      {language === 'ar' ? 'رابط الجلسة (Zoom)' : 'Session Link (Zoom)'}
+                    </label>
+                    <Input
+                      value={newPost.session_link}
+                      onChange={(e) => setNewPost({ ...newPost, session_link: e.target.value })}
+                      placeholder="https://zoom.us/j/..."
+                      dir="ltr"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium flex items-center gap-2">
+                      <Calendar className="h-4 w-4" />
+                      {language === 'ar' ? 'موعد الجلسة' : 'Session Date'}
+                    </label>
+                    <Input
+                      type="datetime-local"
+                      value={newPost.session_date}
+                      onChange={(e) => setNewPost({ ...newPost, session_date: e.target.value })}
+                      dir="ltr"
+                    />
+                  </div>
+                </div>
+              )}
               <div className="flex gap-2">
                 <Button type="submit" disabled={submitting}>
                   {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : t.groups.publish}
@@ -306,6 +350,7 @@ export default function SubjectGroup() {
                         {post.post_type === 'announcement' && t.groups.announcement}
                         {post.post_type === 'update' && t.groups.update}
                         {post.post_type === 'resource' && t.groups.resource}
+                        {post.post_type === 'schedule' && (language === 'ar' ? 'جدول حصة' : 'Schedule')}
                       </span>
                     </Badge>
                   </div>
@@ -323,6 +368,49 @@ export default function SubjectGroup() {
               </CardHeader>
               <CardContent>
                 <p className="text-foreground whitespace-pre-wrap">{post.content}</p>
+                
+                {/* Session Link for schedule posts */}
+                {post.post_type === 'schedule' && post.session_link && (
+                  <div className="mt-4 p-3 bg-muted rounded-lg space-y-2">
+                    {post.session_date && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Calendar className="h-4 w-4 text-primary" />
+                        <span className="font-medium">
+                          {new Date(post.session_date).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', {
+                            weekday: 'long',
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2">
+                      <LinkIcon className="h-4 w-4 text-primary" />
+                      <a 
+                        href={post.session_link} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline text-sm truncate flex-1"
+                        dir="ltr"
+                      >
+                        {post.session_link}
+                      </a>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          navigator.clipboard.writeText(post.session_link || '');
+                          toast.success(language === 'ar' ? 'تم نسخ الرابط' : 'Link copied');
+                        }}
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
                 <div className="flex items-center gap-2 mt-4 text-xs text-muted-foreground">
                   <span>{t.groups.postedBy}: {post.profiles?.full_name || 'Unknown'}</span>
                   <span>•</span>

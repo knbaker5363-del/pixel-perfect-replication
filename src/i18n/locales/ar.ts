@@ -1,0 +1,55 @@
+export const ar = {
+  // Auth Page
+  auth: {
+    platformName: 'منصة التعلم من الأقران',
+    platformDescription: 'تعلّم من زملائك المتفوقين في نفس تخصصك',
+    howItWorks: 'كيف يعمل؟',
+    step1Title: 'اختر مادتك',
+    step1Description: 'تصفح المواد واختر ما تريد تعلمه',
+    step2Title: 'احجز جلسة',
+    step2Description: 'اختر معلّم متفوق وحدد موعداً مناسباً',
+    step3Title: 'تعلّم واكسب',
+    step3Description: 'تعلّم عبر Zoom واحصل على نقاط',
+    features: {
+      zoom: 'جلسات مباشرة عبر Zoom',
+      teachers: 'معلّمون من نفس تخصصك',
+      prices: 'أسعار مناسبة للطلاب',
+      points: 'نظام نقاط ومكافآت',
+    },
+    welcome: 'مرحباً بك!',
+    loginSubtitle: 'سجّل دخولك للمتابعة',
+    signupSubtitle: 'أنشئ حسابك للبدء في التعلم',
+    fullName: 'الاسم الكامل',
+    fullNamePlaceholder: 'أدخل اسمك الكامل',
+    email: 'البريد الإلكتروني',
+    emailPlaceholder: 'example@email.com',
+    password: 'كلمة المرور',
+    passwordPlaceholder: '••••••••',
+    forgotPassword: 'نسيت كلمة المرور؟',
+    login: 'تسجيل الدخول',
+    signup: 'إنشاء حساب',
+    orContinueWith: 'أو',
+    noAccount: 'ليس لديك حساب؟',
+    createAccount: 'أنشئ حساباً جديداً',
+    haveAccount: 'لديك حساب؟',
+    loginNow: 'سجّل الدخول',
+  },
+  // Common
+  common: {
+    loading: 'جاري التحميل...',
+    error: 'حدث خطأ',
+    success: 'تم بنجاح',
+  },
+  // Errors
+  errors: {
+    invalidCredentials: 'بيانات الدخول غير صحيحة',
+    emailExists: 'هذا البريد الإلكتروني مسجل مسبقاً',
+    enterFullName: 'الرجاء إدخال الاسم الكامل',
+    unexpected: 'حدث خطأ غير متوقع',
+  },
+  // Success messages
+  success: {
+    loginSuccess: 'تم تسجيل الدخول بنجاح',
+    signupSuccess: 'تم إنشاء الحساب بنجاح',
+  },
+};

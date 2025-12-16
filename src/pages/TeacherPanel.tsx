@@ -120,14 +120,26 @@ export default function TeacherPanel() {
       }
 
       // Count students enrolled in my sessions
-      const { data: enrollments, count } = await supabase
-        .from('session_enrollments')
-        .select('student_id, sessions!inner(teacher_id)', { count: 'exact' })
-        .eq('sessions.teacher_id', user.id);
+      const { data: mySessions } = await supabase
+        .from('sessions')
+        .select('id')
+        .eq('teacher_id', user.id);
+
+      let uniqueStudents = 0;
+      if (mySessions && mySessions.length > 0) {
+        const sessionIds = mySessions.map(s => s.id);
+        const { data: enrollments } = await supabase
+          .from('session_enrollments')
+          .select('student_id')
+          .in('session_id', sessionIds);
+        
+        if (enrollments) {
+          uniqueStudents = new Set(enrollments.map(e => e.student_id)).size;
+        }
+      }
 
       // Calculate stats
       const unreadCount = messagesData?.filter(m => !m.is_read).length || 0;
-      const uniqueStudents = new Set(enrollments?.map(e => e.student_id) || []).size;
 
       setStats({
         unreadMessages: unreadCount,

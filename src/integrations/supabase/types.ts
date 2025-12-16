@@ -308,24 +308,68 @@ export type Database = {
           },
         ]
       }
+      subject_posts: {
+        Row: {
+          content: string
+          created_at: string | null
+          id: string
+          post_type: string | null
+          subject_id: string
+          teacher_id: string
+          title: string
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          id?: string
+          post_type?: string | null
+          subject_id: string
+          teacher_id: string
+          title: string
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          id?: string
+          post_type?: string | null
+          subject_id?: string
+          teacher_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subject_posts_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subjects: {
         Row: {
           created_at: string | null
           description: string | null
           id: string
           name: string
+          proposed_by: string | null
+          status: string | null
         }
         Insert: {
           created_at?: string | null
           description?: string | null
           id?: string
           name: string
+          proposed_by?: string | null
+          status?: string | null
         }
         Update: {
           created_at?: string | null
           description?: string | null
           id?: string
           name?: string
+          proposed_by?: string | null
+          status?: string | null
         }
         Relationships: []
       }

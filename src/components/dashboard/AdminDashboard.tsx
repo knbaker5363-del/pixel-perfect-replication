@@ -1,125 +1,261 @@
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Users, BookOpen, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Users, BookOpen, GraduationCap, FileText, UserPlus, Loader2, CheckCircle, XCircle, UserCheck, Clock, AlertCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { format } from 'date-fns';
-import { ar } from 'date-fns/locale';
 import { toast } from 'sonner';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { format } from 'date-fns';
+import { ar, enUS } from 'date-fns/locale';
 
 interface TeacherApplication {
   id: string;
   user_id: string;
-  proof_url: string;
   status: string;
   created_at: string;
+  proof_url: string;
   profiles: { full_name: string | null } | null;
   subjects: { name: string } | null;
 }
 
+interface SubjectProposal {
+  id: string;
+  name: string;
+  description: string | null;
+  proposed_by: string | null;
+  created_at: string;
+  profiles: { full_name: string | null } | null;
+}
+
 export function AdminDashboard() {
-  const [totalUsers, setTotalUsers] = useState(0);
-  const [totalSubjects, setTotalSubjects] = useState(0);
-  const [pendingApplications, setPendingApplications] = useState<TeacherApplication[]>([]);
+  const { t, language } = useLanguage();
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    totalTeachers: 0,
+    totalStudents: 0,
+    totalSubjects: 0,
+    pendingApplications: 0,
+    pendingSubjects: 0,
+  });
+  const [applications, setApplications] = useState<TeacherApplication[]>([]);
+  const [subjectProposals, setSubjectProposals] = useState<SubjectProposal[]>([]);
   const [loading, setLoading] = useState(true);
+  const [teacherEmail, setTeacherEmail] = useState('');
+  const [addingTeacher, setAddingTeacher] = useState(false);
 
   const fetchData = async () => {
-    // Fetch total users
-    const { count: usersCount } = await supabase
-      .from('profiles')
-      .select('*', { count: 'exact', head: true });
+    try {
+      // Fetch role counts
+      const { data: roleCounts } = await supabase
+        .from('user_roles')
+        .select('role');
+      
+      const teachers = roleCounts?.filter(r => r.role === 'teacher').length || 0;
+      const students = roleCounts?.filter(r => r.role === 'student').length || 0;
+      
+      // Fetch total users (unique)
+      const { count: usersCount } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true });
 
-    setTotalUsers(usersCount || 0);
+      // Fetch approved subjects count
+      const { count: subjectsCount } = await supabase
+        .from('subjects')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'approved');
 
-    // Fetch total subjects
-    const { count: subjectsCount } = await supabase
-      .from('subjects')
-      .select('*', { count: 'exact', head: true });
+      // Fetch pending applications count
+      const { count: pendingCount } = await supabase
+        .from('teacher_applications')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'pending');
 
-    setTotalSubjects(subjectsCount || 0);
+      // Fetch pending subjects count
+      const { count: pendingSubjectsCount } = await supabase
+        .from('subjects')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'pending');
 
-    // Fetch pending applications
-    const { data: applications } = await supabase
-      .from('teacher_applications')
-      .select(`
-        *,
-        profiles:user_id (full_name),
-        subjects (name)
-      `)
-      .eq('status', 'pending')
-      .order('created_at', { ascending: false });
+      setStats({
+        totalUsers: usersCount || 0,
+        totalTeachers: teachers,
+        totalStudents: students,
+        totalSubjects: subjectsCount || 0,
+        pendingApplications: pendingCount || 0,
+        pendingSubjects: pendingSubjectsCount || 0,
+      });
 
-    if (applications) {
-      setPendingApplications(applications as unknown as TeacherApplication[]);
+      // Fetch pending applications with details
+      const { data: applicationsData } = await supabase
+        .from('teacher_applications')
+        .select(`
+          *,
+          profiles:user_id(full_name),
+          subjects:subject_id(name)
+        `)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
+
+      setApplications((applicationsData as unknown as TeacherApplication[]) || []);
+
+      // Fetch pending subject proposals
+      const { data: proposalsData } = await supabase
+        .from('subjects')
+        .select(`
+          id,
+          name,
+          description,
+          proposed_by,
+          created_at
+        `)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
+
+      // Fetch proposer profiles separately
+      if (proposalsData && proposalsData.length > 0) {
+        const proposerIds = proposalsData.map(p => p.proposed_by).filter(Boolean);
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('user_id, full_name')
+          .in('user_id', proposerIds);
+
+        const proposalsWithProfiles = proposalsData.map(proposal => ({
+          ...proposal,
+          profiles: profiles?.find(p => p.user_id === proposal.proposed_by) || null,
+        }));
+
+        setSubjectProposals(proposalsWithProfiles as SubjectProposal[]);
+      } else {
+        setSubjectProposals([]);
+      }
+
+    } catch (error) {
+      console.error('Error fetching admin data:', error);
+      toast.error(t.common.error);
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   useEffect(() => {
     fetchData();
   }, []);
 
-  const handleApplication = async (applicationId: string, userId: string, approved: boolean) => {
+  const handleAddTeacher = async () => {
+    if (!teacherEmail.trim()) return;
+    
+    setAddingTeacher(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      const response = await supabase.functions.invoke('admin-add-teacher', {
+        body: { email: teacherEmail },
+        headers: {
+          Authorization: `Bearer ${session?.access_token}`,
+        },
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+
+      if (response.data.error) {
+        if (response.data.error.includes('not found')) {
+          toast.error(t.admin.userNotFound);
+        } else if (response.data.error.includes('already')) {
+          toast.error(t.admin.alreadyTeacher);
+        } else {
+          toast.error(response.data.error);
+        }
+        return;
+      }
+
+      toast.success(t.admin.teacherAdded);
+      setTeacherEmail('');
+      fetchData();
+    } catch (error: any) {
+      console.error('Error adding teacher:', error);
+      toast.error(error.message || t.common.error);
+    } finally {
+      setAddingTeacher(false);
+    }
+  };
+
+  const handleApplication = async (applicationId: string, userId: string, status: 'approved' | 'rejected') => {
     try {
       // Update application status
       const { error: updateError } = await supabase
         .from('teacher_applications')
-        .update({ status: approved ? 'approved' : 'rejected' })
+        .update({ status })
         .eq('id', applicationId);
 
       if (updateError) throw updateError;
 
-      if (approved) {
-        // Add teacher role
+      // If approved, add teacher role
+      if (status === 'approved') {
         const { error: roleError } = await supabase
           .from('user_roles')
           .insert({ user_id: userId, role: 'teacher' });
 
-        if (roleError) throw roleError;
+        if (roleError && !roleError.message.includes('duplicate')) {
+          throw roleError;
+        }
       }
 
-      toast.success(approved ? 'تم قبول الطلب بنجاح' : 'تم رفض الطلب');
+      toast.success(status === 'approved' ? t.admin.applicationApproved : t.admin.applicationRejected);
       fetchData();
     } catch (error) {
-      toast.error('حدث خطأ أثناء معالجة الطلب');
+      console.error('Error handling application:', error);
+      toast.error(t.common.error);
     }
   };
 
-  const stats = [
-    { 
-      title: 'إجمالي المستخدمين', 
-      value: totalUsers, 
-      icon: Users, 
-      color: 'text-foreground' 
-    },
-    { 
-      title: 'المواد', 
-      value: totalSubjects, 
-      icon: BookOpen, 
-      color: 'text-foreground' 
-    },
-    { 
-      title: 'طلبات معلقة', 
-      value: pendingApplications.length, 
-      icon: Clock, 
-      color: 'text-foreground' 
-    },
+  const handleSubjectProposal = async (subjectId: string, status: 'approved' | 'rejected') => {
+    try {
+      const { error } = await supabase
+        .from('subjects')
+        .update({ status })
+        .eq('id', subjectId);
+
+      if (error) throw error;
+
+      toast.success(status === 'approved' ? t.admin.subjectApproved : t.admin.subjectRejected);
+      fetchData();
+    } catch (error) {
+      console.error('Error handling subject proposal:', error);
+      toast.error(t.common.error);
+    }
+  };
+
+  const statCards = [
+    { title: t.admin.totalUsers, value: stats.totalUsers, icon: Users },
+    { title: t.admin.totalTeachers, value: stats.totalTeachers, icon: GraduationCap },
+    { title: t.admin.totalStudents, value: stats.totalStudents, icon: UserCheck },
+    { title: t.admin.totalSubjects, value: stats.totalSubjects, icon: BookOpen },
+    { title: t.admin.pendingApplications, value: stats.pendingApplications, icon: Clock },
+    { title: t.admin.pendingSubjects, value: stats.pendingSubjects, icon: FileText },
   ];
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
-        <h1 className="text-2xl font-bold">لوحة تحكم الإدارة</h1>
-        <p className="text-muted-foreground mt-1">
-          إدارة المنصة والمستخدمين
-        </p>
+        <h1 className="text-2xl font-bold">{t.admin.dashboard}</h1>
+        <p className="text-muted-foreground">{t.admin.statistics}</p>
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {stats.map((stat) => (
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {statCards.map((stat) => (
           <Card key={stat.title} className="border-border/50">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
@@ -128,7 +264,7 @@ export function AdminDashboard() {
                   <p className="text-2xl font-bold mt-1">{stat.value}</p>
                 </div>
                 <div className="w-10 h-10 bg-muted rounded-xl flex items-center justify-center">
-                  <stat.icon className={`w-5 h-5 ${stat.color}`} />
+                  <stat.icon className="w-5 h-5 text-foreground" />
                 </div>
               </div>
             </CardContent>
@@ -136,71 +272,140 @@ export function AdminDashboard() {
         ))}
       </div>
 
-      {/* Pending Applications */}
+      {/* Add Teacher by Email */}
+      <Card className="border-border/50">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <UserPlus className="h-5 w-5" />
+            {t.admin.addTeacherByEmail}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex gap-2">
+            <Input
+              type="email"
+              placeholder={t.admin.emailPlaceholder}
+              value={teacherEmail}
+              onChange={(e) => setTeacherEmail(e.target.value)}
+              className="flex-1"
+              dir="ltr"
+            />
+            <Button onClick={handleAddTeacher} disabled={addingTeacher || !teacherEmail.trim()}>
+              {addingTeacher ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                t.admin.addTeacher
+              )}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Teacher Applications */}
       <Card className="border-border/50">
         <CardHeader className="pb-3">
           <CardTitle className="text-lg flex items-center gap-2">
             <AlertCircle className="w-5 h-5" />
-            طلبات التدريس المعلقة
+            {t.admin.teacherApplications}
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {loading ? (
-            <div className="space-y-3">
-              {[1, 2, 3].map(i => (
-                <div key={i} className="h-20 bg-muted animate-pulse rounded-lg" />
-              ))}
+          {applications.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <CheckCircle className="w-12 h-12 mx-auto mb-3 opacity-50" />
+              <p>{t.admin.noApplications}</p>
             </div>
-          ) : pendingApplications.length > 0 ? (
+          ) : (
             <div className="space-y-3">
-              {pendingApplications.map((application) => (
-                <div 
-                  key={application.id}
-                  className="p-4 bg-muted/50 rounded-lg"
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">
-                        {application.profiles?.full_name || 'مستخدم'}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        يريد تدريس: {application.subjects?.name || 'غير محدد'}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {format(new Date(application.created_at), 'dd MMM yyyy', { locale: ar })}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <a 
-                        href={application.proof_url} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="text-sm text-primary hover:underline"
-                      >
-                        عرض الإثبات
-                      </a>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleApplication(application.id, application.user_id, false)}
-                      >
-                        <XCircle className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        onClick={() => handleApplication(application.id, application.user_id, true)}
-                      >
-                        <CheckCircle className="w-4 h-4" />
-                      </Button>
-                    </div>
+              {applications.map((app) => (
+                <div key={app.id} className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+                  <div className="space-y-1">
+                    <p className="font-medium">{app.profiles?.full_name || 'Unknown'}</p>
+                    <p className="text-sm text-muted-foreground">{app.subjects?.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {format(new Date(app.created_at), 'dd MMM yyyy', { locale: language === 'ar' ? ar : enUS })}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <a 
+                      href={app.proof_url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-sm text-primary hover:underline"
+                    >
+                      {language === 'ar' ? 'عرض الإثبات' : 'View Proof'}
+                    </a>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleApplication(app.id, app.user_id, 'approved')}
+                    >
+                      <CheckCircle className="h-4 w-4 me-1" />
+                      {t.admin.approve}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleApplication(app.id, app.user_id, 'rejected')}
+                    >
+                      <XCircle className="h-4 w-4 me-1" />
+                      {t.admin.reject}
+                    </Button>
                   </div>
                 </div>
               ))}
             </div>
-          ) : (
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Subject Proposals */}
+      <Card className="border-border/50">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <BookOpen className="w-5 h-5" />
+            {t.admin.subjectProposals}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {subjectProposals.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <CheckCircle className="w-12 h-12 mx-auto mb-3 opacity-50" />
-              <p>لا توجد طلبات معلقة</p>
+              <p>{t.admin.noProposals}</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {subjectProposals.map((proposal) => (
+                <div key={proposal.id} className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+                  <div className="space-y-1">
+                    <p className="font-medium">{proposal.name}</p>
+                    {proposal.description && (
+                      <p className="text-sm text-muted-foreground">{proposal.description}</p>
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      {t.groups.postedBy}: {proposal.profiles?.full_name || 'Unknown'}
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleSubjectProposal(proposal.id, 'approved')}
+                    >
+                      <CheckCircle className="h-4 w-4 me-1" />
+                      {t.admin.approve}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleSubjectProposal(proposal.id, 'rejected')}
+                    >
+                      <XCircle className="h-4 w-4 me-1" />
+                      {t.admin.reject}
+                    </Button>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </CardContent>

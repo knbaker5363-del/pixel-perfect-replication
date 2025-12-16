@@ -3,13 +3,14 @@ import {
   LayoutDashboard, 
   BookOpen, 
   Calendar, 
-  FileText, 
   StickyNote, 
   CheckSquare,
   Users,
   Settings,
   LogOut,
-  Bell
+  Bell,
+  GraduationCap,
+  User
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useAuth } from '@/contexts/AuthContext';
@@ -53,6 +54,7 @@ export function AppSidebar() {
 
   const isActive = (path: string) => location.pathname === path;
   const isAdmin = hasRole('admin');
+  const isTeacher = hasRole('teacher');
 
   const getInitials = (name: string | null) => {
     if (!name) return 'U';
@@ -112,6 +114,35 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
+        {isTeacher && (
+          <SidebarGroup>
+            <SidebarGroupLabel className={collapsed ? 'sr-only' : ''}>
+              المعلم
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton 
+                    asChild 
+                    isActive={isActive('/teacher/panel')}
+                    tooltip="لوحة المعلم"
+                  >
+                    <NavLink 
+                      to="/teacher/panel" 
+                      end 
+                      className="flex items-center gap-3"
+                      activeClassName="bg-accent text-accent-foreground"
+                    >
+                      <GraduationCap className="w-5 h-5 flex-shrink-0" />
+                      {!collapsed && <span>لوحة المعلم</span>}
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+
         {isAdmin && (
           <SidebarGroup>
             <SidebarGroupLabel className={collapsed ? 'sr-only' : ''}>
@@ -146,34 +177,37 @@ export function AppSidebar() {
 
       <SidebarFooter className="p-4">
         <Separator className="mb-4" />
-        <div className={`flex items-center gap-3 ${collapsed ? 'justify-center' : ''}`}>
-          <Avatar className="w-10 h-10 border-2 border-border">
-            <AvatarImage src={profile?.avatar_url || undefined} />
-            <AvatarFallback className="bg-muted text-muted-foreground font-medium">
-              {getInitials(profile?.full_name)}
-            </AvatarFallback>
-          </Avatar>
-          {!collapsed && (
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">
-                {profile?.full_name || 'مستخدم'}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {profile?.points || 0} نقطة
-              </p>
-            </div>
-          )}
-          {!collapsed && (
-            <Button 
-              variant="ghost" 
-              size="icon"
-              onClick={signOut}
-              className="flex-shrink-0"
-            >
-              <LogOut className="w-4 h-4" />
-            </Button>
-          )}
-        </div>
+        <NavLink to="/profile" className="block">
+          <div className={`flex items-center gap-3 p-2 rounded-lg hover:bg-accent transition-colors ${collapsed ? 'justify-center' : ''}`}>
+            <Avatar className="w-10 h-10 border-2 border-border">
+              <AvatarImage src={profile?.avatar_url || undefined} />
+              <AvatarFallback className="bg-muted text-muted-foreground font-medium">
+                {getInitials(profile?.full_name)}
+              </AvatarFallback>
+            </Avatar>
+            {!collapsed && (
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">
+                  {profile?.full_name || 'مستخدم'}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {profile?.points || 0} نقطة
+                </p>
+              </div>
+            )}
+          </div>
+        </NavLink>
+        {!collapsed && (
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={signOut}
+            className="w-full mt-2 justify-start"
+          >
+            <LogOut className="w-4 h-4 me-2" />
+            تسجيل الخروج
+          </Button>
+        )}
       </SidebarFooter>
     </Sidebar>
   );

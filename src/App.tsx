@@ -13,6 +13,7 @@ import Sessions from "@/pages/Sessions";
 import Assignments from "@/pages/Assignments";
 import Notes from "@/pages/Notes";
 import Todos from "@/pages/Todos";
+import Notifications from "@/pages/Notifications";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -34,6 +35,7 @@ const App = () => (
               <Route path="/assignments" element={<DashboardLayout><Assignments /></DashboardLayout>} />
               <Route path="/notes" element={<DashboardLayout><Notes /></DashboardLayout>} />
               <Route path="/todos" element={<DashboardLayout><Todos /></DashboardLayout>} />
+              <Route path="/notifications" element={<DashboardLayout><Notifications /></DashboardLayout>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </AuthProvider>

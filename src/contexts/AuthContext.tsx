@@ -103,7 +103,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setRoles([]);
   };
 
-  const hasRole = (role: AppRole) => roles.includes(role);
+  const hasRole = (role: AppRole) => {
+    // Admin has all permissions including teacher
+    if (roles.includes('admin') && role === 'teacher') {
+      return true;
+    }
+    return roles.includes(role);
+  };
 
   return (
     <AuthContext.Provider value={{

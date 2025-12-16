@@ -2,8 +2,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Users, BookOpen, GraduationCap, FileText, UserPlus, Loader2, CheckCircle, XCircle, UserCheck, Clock, AlertCircle } from 'lucide-react';
+import { Users, BookOpen, GraduationCap, FileText, Loader2, CheckCircle, XCircle, UserCheck, Clock, AlertCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -42,8 +41,6 @@ export function AdminDashboard() {
   const [applications, setApplications] = useState<TeacherApplication[]>([]);
   const [subjectProposals, setSubjectProposals] = useState<SubjectProposal[]>([]);
   const [loading, setLoading] = useState(true);
-  const [teacherEmail, setTeacherEmail] = useState('');
-  const [addingTeacher, setAddingTeacher] = useState(false);
 
   const fetchData = async () => {
     try {
@@ -143,46 +140,6 @@ export function AdminDashboard() {
     fetchData();
   }, []);
 
-  const handleAddTeacher = async () => {
-    if (!teacherEmail.trim()) return;
-    
-    setAddingTeacher(true);
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      const response = await supabase.functions.invoke('admin-add-teacher', {
-        body: { email: teacherEmail },
-        headers: {
-          Authorization: `Bearer ${session?.access_token}`,
-        },
-      });
-
-      if (response.error) {
-        throw new Error(response.error.message);
-      }
-
-      if (response.data.error) {
-        if (response.data.error.includes('not found')) {
-          toast.error(t.admin.userNotFound);
-        } else if (response.data.error.includes('already')) {
-          toast.error(t.admin.alreadyTeacher);
-        } else {
-          toast.error(response.data.error);
-        }
-        return;
-      }
-
-      toast.success(t.admin.teacherAdded);
-      setTeacherEmail('');
-      fetchData();
-    } catch (error: any) {
-      console.error('Error adding teacher:', error);
-      toast.error(error.message || t.common.error);
-    } finally {
-      setAddingTeacher(false);
-    }
-  };
-
   const handleApplication = async (applicationId: string, userId: string, status: 'approved' | 'rejected') => {
     try {
       // Update application status
@@ -271,35 +228,6 @@ export function AdminDashboard() {
           </Card>
         ))}
       </div>
-
-      {/* Add Teacher by Email */}
-      <Card className="border-border/50">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <UserPlus className="h-5 w-5" />
-            {t.admin.addTeacherByEmail}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex gap-2">
-            <Input
-              type="email"
-              placeholder={t.admin.emailPlaceholder}
-              value={teacherEmail}
-              onChange={(e) => setTeacherEmail(e.target.value)}
-              className="flex-1"
-              dir="ltr"
-            />
-            <Button onClick={handleAddTeacher} disabled={addingTeacher || !teacherEmail.trim()}>
-              {addingTeacher ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                t.admin.addTeacher
-              )}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Teacher Applications */}
       <Card className="border-border/50">

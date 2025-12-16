@@ -11,6 +11,7 @@ import AdminAuth from "@/pages/AdminAuth";
 import Dashboard from "@/pages/Dashboard";
 import Subjects from "@/pages/Subjects";
 import Sessions from "@/pages/Sessions";
+import CreateSession from "@/pages/CreateSession";
 import Notes from "@/pages/Notes";
 import Todos from "@/pages/Todos";
 import Notifications from "@/pages/Notifications";
@@ -39,6 +40,7 @@ const App = () => (
               <Route path="/subjects" element={<DashboardLayout><Subjects /></DashboardLayout>} />
               <Route path="/subjects/:id/group" element={<DashboardLayout><SubjectGroup /></DashboardLayout>} />
               <Route path="/sessions" element={<DashboardLayout><Sessions /></DashboardLayout>} />
+              <Route path="/sessions/create" element={<DashboardLayout><CreateSession /></DashboardLayout>} />
               <Route path="/notes" element={<DashboardLayout><Notes /></DashboardLayout>} />
               <Route path="/todos" element={<DashboardLayout><Todos /></DashboardLayout>} />
               <Route path="/notifications" element={<DashboardLayout><Notifications /></DashboardLayout>} />

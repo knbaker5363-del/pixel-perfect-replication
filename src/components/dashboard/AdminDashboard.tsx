@@ -2,12 +2,13 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Users, BookOpen, GraduationCap, FileText, Loader2, CheckCircle, XCircle, UserCheck, Clock, AlertCircle } from 'lucide-react';
+import { Users, BookOpen, GraduationCap, FileText, Loader2, CheckCircle, XCircle, UserCheck, Clock, AlertCircle, Eye } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { format } from 'date-fns';
 import { ar, enUS } from 'date-fns/locale';
+import SubjectProposalDetails from '@/components/admin/SubjectProposalDetails';
 
 interface TeacherApplication {
   id: string;
@@ -24,7 +25,8 @@ interface SubjectProposal {
   name: string;
   description: string | null;
   proposed_by: string | null;
-  created_at: string;
+  created_at: string | null;
+  status: string | null;
   profiles: { full_name: string | null } | null;
 }
 
@@ -41,6 +43,8 @@ export function AdminDashboard() {
   const [applications, setApplications] = useState<TeacherApplication[]>([]);
   const [subjectProposals, setSubjectProposals] = useState<SubjectProposal[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedProposal, setSelectedProposal] = useState<SubjectProposal | null>(null);
+  const [proposalDialogOpen, setProposalDialogOpen] = useState(false);
 
   const fetchData = async () => {
     try {
@@ -105,7 +109,8 @@ export function AdminDashboard() {
           name,
           description,
           proposed_by,
-          created_at
+          created_at,
+          status
         `)
         .eq('status', 'pending')
         .order('created_at', { ascending: false });
@@ -307,37 +312,40 @@ export function AdminDashboard() {
                 <div key={proposal.id} className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
                   <div className="space-y-1">
                     <p className="font-medium">{proposal.name}</p>
-                    {proposal.description && (
-                      <p className="text-sm text-muted-foreground">{proposal.description}</p>
-                    )}
                     <p className="text-xs text-muted-foreground">
                       {t.groups.postedBy}: {proposal.profiles?.full_name || 'Unknown'}
                     </p>
                   </div>
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleSubjectProposal(proposal.id, 'approved')}
-                    >
-                      <CheckCircle className="h-4 w-4 me-1" />
-                      {t.admin.approve}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleSubjectProposal(proposal.id, 'rejected')}
-                    >
-                      <XCircle className="h-4 w-4 me-1" />
-                      {t.admin.reject}
-                    </Button>
-                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setSelectedProposal(proposal);
+                      setProposalDialogOpen(true);
+                    }}
+                  >
+                    <Eye className="h-4 w-4 me-1" />
+                    {language === 'ar' ? 'تفاصيل' : 'Details'}
+                  </Button>
                 </div>
               ))}
             </div>
           )}
         </CardContent>
       </Card>
+
+      {/* Subject Proposal Details Dialog */}
+      <SubjectProposalDetails
+        proposal={selectedProposal}
+        open={proposalDialogOpen}
+        onOpenChange={setProposalDialogOpen}
+        onApprove={async (id) => {
+          await handleSubjectProposal(id, 'approved');
+        }}
+        onReject={async (id) => {
+          await handleSubjectProposal(id, 'rejected');
+        }}
+      />
     </div>
   );
 }

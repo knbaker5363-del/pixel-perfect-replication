@@ -5,10 +5,12 @@ import { Badge } from '@/components/ui/badge';
 import { Calendar, Clock, Users, Video, Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
+import { ContactTeacherDialog } from '@/components/sessions/ContactTeacherDialog';
 
 interface Session {
   id: string;
@@ -27,6 +29,7 @@ interface Session {
 
 export default function Sessions() {
   const { user, hasRole } = useAuth();
+  const { language } = useLanguage();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [enrolledIds, setEnrolledIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -154,19 +157,26 @@ export default function Sessions() {
                       )}
                     </p>
                   </div>
-                  <div className="flex-shrink-0">
+                  <div className="flex-shrink-0 flex flex-col gap-2">
                     {enrolledIds.includes(session.id) ? (
                       <Badge variant="outline" className="text-sm px-4 py-2">
-                        مسجّل ✓
+                        {language === 'ar' ? 'مسجّل ✓' : 'Enrolled ✓'}
                       </Badge>
                     ) : session.teacher_id === user?.id ? (
                       <Badge variant="secondary" className="text-sm px-4 py-2">
-                        جلستك
+                        {language === 'ar' ? 'جلستك' : 'Your Session'}
                       </Badge>
                     ) : (
                       <Button onClick={() => handleEnroll(session.id)}>
-                        التسجيل في الجلسة
+                        {language === 'ar' ? 'التسجيل في الجلسة' : 'Enroll'}
                       </Button>
+                    )}
+                    {session.teacher_id !== user?.id && user && (
+                      <ContactTeacherDialog
+                        teacherId={session.teacher_id}
+                        teacherName={session.profiles?.full_name || (language === 'ar' ? 'المعلم' : 'Teacher')}
+                        sessionTitle={session.title}
+                      />
                     )}
                   </div>
                 </div>

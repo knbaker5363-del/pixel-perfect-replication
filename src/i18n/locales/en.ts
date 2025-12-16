@@ -1,4 +1,9 @@
 export const en = {
+  adminAuth: {
+    title: 'Admin Control Panel',
+    subtitle: 'Administrators login only',
+    notAuthorized: 'You are not authorized to access this page. Admins only.'
+  },
   // Auth Page
   auth: {
     platformName: 'Peer Learning Platform',

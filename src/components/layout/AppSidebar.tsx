@@ -35,7 +35,6 @@ const mainNavItems = [
   { title: 'لوحة التحكم', url: '/dashboard', icon: LayoutDashboard },
   { title: 'المواد', url: '/subjects', icon: BookOpen },
   { title: 'الجلسات', url: '/sessions', icon: Calendar },
-  { title: 'الواجبات', url: '/assignments', icon: FileText },
   { title: 'الملاحظات', url: '/notes', icon: StickyNote },
   { title: 'المهام', url: '/todos', icon: CheckSquare },
   { title: 'الإشعارات', url: '/notifications', icon: Bell },

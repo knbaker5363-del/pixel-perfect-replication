@@ -6,6 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
+import { TeacherApplicationForm } from '@/components/TeacherApplicationForm';
 
 interface Profile {
   id: string;
@@ -238,6 +239,9 @@ export function StudentDashboard({ profile }: StudentDashboardProps) {
           </CardContent>
         </Card>
       </div>
+
+      {/* Teacher Application Form */}
+      <TeacherApplicationForm />
     </div>
   );
 }

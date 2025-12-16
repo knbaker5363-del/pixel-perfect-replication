@@ -8,7 +8,8 @@ import {
   CheckSquare,
   Users,
   Settings,
-  LogOut
+  LogOut,
+  Bell
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useAuth } from '@/contexts/AuthContext';
@@ -28,6 +29,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import { NotificationBell } from '@/components/notifications/NotificationBell';
 
 const mainNavItems = [
   { title: 'لوحة التحكم', url: '/dashboard', icon: LayoutDashboard },
@@ -36,6 +38,7 @@ const mainNavItems = [
   { title: 'الواجبات', url: '/assignments', icon: FileText },
   { title: 'الملاحظات', url: '/notes', icon: StickyNote },
   { title: 'المهام', url: '/todos', icon: CheckSquare },
+  { title: 'الإشعارات', url: '/notifications', icon: Bell },
 ];
 
 const adminNavItems = [
@@ -69,11 +72,12 @@ export function AppSidebar() {
             <BookOpen className="w-5 h-5 text-primary-foreground" />
           </div>
           {!collapsed && (
-            <div className="flex flex-col">
+            <div className="flex flex-col flex-1">
               <span className="font-bold text-lg">منصة التعلم</span>
               <span className="text-xs text-muted-foreground">Education Platform</span>
             </div>
           )}
+          {!collapsed && <NotificationBell />}
         </div>
       </SidebarHeader>
 

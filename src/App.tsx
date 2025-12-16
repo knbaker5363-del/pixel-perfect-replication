@@ -7,6 +7,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import Auth from "@/pages/Auth";
+import AdminAuth from "@/pages/AdminAuth";
 import Dashboard from "@/pages/Dashboard";
 import Subjects from "@/pages/Subjects";
 import Sessions from "@/pages/Sessions";
@@ -29,6 +30,7 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route path="/auth" element={<Auth />} />
+              <Route path="/adminpanel" element={<AdminAuth />} />
               <Route path="/dashboard" element={<DashboardLayout><Dashboard /></DashboardLayout>} />
               <Route path="/subjects" element={<DashboardLayout><Subjects /></DashboardLayout>} />
               <Route path="/sessions" element={<DashboardLayout><Sessions /></DashboardLayout>} />

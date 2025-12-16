@@ -1,4 +1,9 @@
 export const ar = {
+  adminAuth: {
+    title: 'لوحة تحكم الإدارة',
+    subtitle: 'تسجيل دخول المسؤولين فقط',
+    notAuthorized: 'غير مصرح لك بالدخول. هذه الصفحة للمسؤولين فقط.'
+  },
   // Auth Page
   auth: {
     platformName: 'منصة التعلم من الأقران',

@@ -15,6 +15,7 @@ import Assignments from "@/pages/Assignments";
 import Notes from "@/pages/Notes";
 import Todos from "@/pages/Todos";
 import Notifications from "@/pages/Notifications";
+import SubjectGroup from "@/pages/SubjectGroup";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -33,6 +34,7 @@ const App = () => (
               <Route path="/adminpanel" element={<AdminAuth />} />
               <Route path="/dashboard" element={<DashboardLayout><Dashboard /></DashboardLayout>} />
               <Route path="/subjects" element={<DashboardLayout><Subjects /></DashboardLayout>} />
+              <Route path="/subjects/:id/group" element={<DashboardLayout><SubjectGroup /></DashboardLayout>} />
               <Route path="/sessions" element={<DashboardLayout><Sessions /></DashboardLayout>} />
               <Route path="/assignments" element={<DashboardLayout><Assignments /></DashboardLayout>} />
               <Route path="/notes" element={<DashboardLayout><Notes /></DashboardLayout>} />

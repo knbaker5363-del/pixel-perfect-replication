@@ -246,6 +246,36 @@ export type Database = {
           },
         ]
       }
+      scheduled_reminders: {
+        Row: {
+          created_at: string | null
+          id: string
+          reminder_type: string
+          scheduled_for: string
+          sent: boolean | null
+          session_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          reminder_type: string
+          scheduled_for: string
+          sent?: boolean | null
+          session_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          reminder_type?: string
+          scheduled_for?: string
+          sent?: boolean | null
+          session_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       session_enrollments: {
         Row: {
           enrolled_at: string | null

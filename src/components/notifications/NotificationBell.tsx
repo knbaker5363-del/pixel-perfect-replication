@@ -107,6 +107,12 @@ export function NotificationBell() {
         return '❌';
       case 'new_session':
         return '📅';
+      case 'session_enrolled':
+        return '🎫';
+      case 'new_enrollment':
+        return '👤';
+      case 'session_reminder':
+        return '⏰';
       default:
         return '🔔';
     }

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, ReactNode } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -18,13 +18,14 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { toast } from 'sonner';
 
-interface ContactTeacherDialogProps {
+export interface ContactTeacherDialogProps {
   teacherId: string;
   teacherName: string;
   sessionTitle?: string;
+  children?: ReactNode;
 }
 
-export function ContactTeacherDialog({ teacherId, teacherName, sessionTitle }: ContactTeacherDialogProps) {
+export function ContactTeacherDialog({ teacherId, teacherName, sessionTitle, children }: ContactTeacherDialogProps) {
   const { user } = useAuth();
   const { language } = useLanguage();
   const [open, setOpen] = useState(false);
@@ -75,10 +76,12 @@ export function ContactTeacherDialog({ teacherId, teacherName, sessionTitle }: C
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          <MessageSquare className="h-4 w-4 me-2" />
-          {language === 'ar' ? 'تواصل مع المعلم' : 'Contact Teacher'}
-        </Button>
+        {children || (
+          <Button variant="outline" size="sm">
+            <MessageSquare className="h-4 w-4 me-2" />
+            {language === 'ar' ? 'تواصل مع المعلم' : 'Contact Teacher'}
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>

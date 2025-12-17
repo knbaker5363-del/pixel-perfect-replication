@@ -14,7 +14,8 @@ import {
   MessageCircle,
   Wallet,
   BarChart3,
-  ClipboardList
+  ClipboardList,
+  CreditCard
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useAuth } from '@/contexts/AuthContext';
@@ -40,6 +41,7 @@ const mainNavItems = [
   { title: 'لوحة التحكم', url: '/dashboard', icon: LayoutDashboard },
   { title: 'المواد', url: '/subjects', icon: BookOpen },
   { title: 'الجلسات', url: '/sessions', icon: Calendar },
+  { title: 'اشتراكاتي', url: '/subscriptions', icon: CreditCard },
   { title: 'الاختبارات', url: '/quizzes', icon: ClipboardList },
   { title: 'الرسائل', url: '/messages', icon: MessageCircle },
   { title: 'الملاحظات', url: '/notes', icon: StickyNote },

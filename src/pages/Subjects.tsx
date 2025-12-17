@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { BookOpen, Search, GraduationCap, User } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { BookOpen, Search, GraduationCap, User, Filter } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Subject {
   id: string;
@@ -13,14 +15,24 @@ interface Subject {
   proposed_by: string | null;
   teacher?: {
     full_name: string | null;
+    university_id: string | null;
     university?: { name: string } | null;
   } | null;
 }
 
+interface University {
+  id: string;
+  name: string;
+}
+
 export default function Subjects() {
   const { language } = useLanguage();
+  const { user } = useAuth();
   const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [universities, setUniversities] = useState<University[]>([]);
   const [search, setSearch] = useState('');
+  const [selectedUniversity, setSelectedUniversity] = useState<string>('all');
+  const [userUniversityId, setUserUniversityId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   const t = {
@@ -33,6 +45,9 @@ export default function Subjects() {
       teacher: 'المعلم',
       university: 'الجامعة',
       notSpecified: 'غير محدد',
+      allUniversities: 'جميع الجامعات',
+      myUniversity: 'جامعتي',
+      filterByUniversity: 'فلترة حسب الجامعة',
     },
     en: {
       title: 'Subjects',
@@ -43,53 +58,81 @@ export default function Subjects() {
       teacher: 'Teacher',
       university: 'University',
       notSpecified: 'Not specified',
+      allUniversities: 'All Universities',
+      myUniversity: 'My University',
+      filterByUniversity: 'Filter by University',
     },
   };
 
   const text = t[language];
 
   useEffect(() => {
-    const fetchSubjects = async () => {
-      // First fetch approved subjects
-      const { data: subjectsData } = await supabase
-        .from('subjects')
-        .select('id, name, description, proposed_by')
-        .eq('status', 'approved')
-        .order('name');
+    fetchData();
+  }, [user]);
 
-      if (subjectsData && subjectsData.length > 0) {
-        // Get unique teacher IDs
-        const teacherIds = [...new Set(subjectsData.map(s => s.proposed_by).filter(Boolean))];
-        
-        if (teacherIds.length > 0) {
-          // Fetch teacher profiles with universities
-          const { data: profiles } = await supabase
-            .from('profiles')
-            .select('user_id, full_name, university:university_id(name)')
-            .in('user_id', teacherIds as string[]);
+  const fetchData = async () => {
+    // Fetch universities
+    const { data: uniData } = await supabase
+      .from('universities')
+      .select('id, name')
+      .eq('is_active', true)
+      .order('name');
 
-          // Map subjects with teacher info
-          const subjectsWithTeachers = subjectsData.map(subject => ({
-            ...subject,
-            teacher: profiles?.find(p => p.user_id === subject.proposed_by) || null,
-          }));
+    if (uniData) {
+      setUniversities(uniData);
+    }
 
-          setSubjects(subjectsWithTeachers as Subject[]);
-        } else {
-          setSubjects(subjectsData as Subject[]);
-        }
-      } else {
-        setSubjects([]);
+    // Get user's university
+    if (user) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('university_id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (profile?.university_id) {
+        setUserUniversityId(profile.university_id);
+        setSelectedUniversity(profile.university_id); // Auto-select user's university
       }
-      setLoading(false);
-    };
+    }
 
-    fetchSubjects();
-  }, []);
+    // Fetch approved subjects
+    const { data: subjectsData } = await supabase
+      .from('subjects')
+      .select('id, name, description, proposed_by')
+      .eq('status', 'approved')
+      .order('name');
 
-  const filteredSubjects = subjects.filter(s => 
-    s.name.toLowerCase().includes(search.toLowerCase())
-  );
+    if (subjectsData && subjectsData.length > 0) {
+      const teacherIds = [...new Set(subjectsData.map(s => s.proposed_by).filter(Boolean))];
+      
+      if (teacherIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('user_id, full_name, university_id, university:university_id(name)')
+          .in('user_id', teacherIds as string[]);
+
+        const subjectsWithTeachers = subjectsData.map(subject => ({
+          ...subject,
+          teacher: profiles?.find(p => p.user_id === subject.proposed_by) || null,
+        }));
+
+        setSubjects(subjectsWithTeachers as Subject[]);
+      } else {
+        setSubjects(subjectsData as Subject[]);
+      }
+    } else {
+      setSubjects([]);
+    }
+    setLoading(false);
+  };
+
+  const filteredSubjects = subjects.filter(s => {
+    const matchesSearch = s.name.toLowerCase().includes(search.toLowerCase());
+    const matchesUniversity = selectedUniversity === 'all' || 
+      s.teacher?.university_id === selectedUniversity;
+    return matchesSearch && matchesUniversity;
+  });
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -98,14 +141,41 @@ export default function Subjects() {
         <p className="text-muted-foreground mt-1">{text.subtitle}</p>
       </div>
 
-      <div className="relative max-w-md">
-        <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input
-          placeholder={text.searchPlaceholder}
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pr-10"
-        />
+      {/* Filters */}
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder={text.searchPlaceholder}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pr-10"
+          />
+        </div>
+        
+        <div className="w-full sm:w-64">
+          <Select value={selectedUniversity} onValueChange={setSelectedUniversity}>
+            <SelectTrigger>
+              <div className="flex items-center gap-2">
+                <Filter className="w-4 h-4" />
+                <SelectValue placeholder={text.filterByUniversity} />
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{text.allUniversities}</SelectItem>
+              {userUniversityId && (
+                <SelectItem value={userUniversityId}>
+                  ⭐ {text.myUniversity}
+                </SelectItem>
+              )}
+              {universities.map((uni) => (
+                <SelectItem key={uni.id} value={uni.id}>
+                  {uni.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {loading ? (
@@ -130,7 +200,6 @@ export default function Subjects() {
                         {subject.description || text.noDescription}
                       </p>
                       
-                      {/* Teacher & University Info */}
                       <div className="mt-3 space-y-1">
                         {subject.teacher?.full_name && (
                           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">

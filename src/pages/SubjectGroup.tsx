@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,7 +6,10 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Plus, Megaphone, FileText, BookOpen, Loader2, Trash2, Calendar, Link as LinkIcon, Copy } from 'lucide-react';
+import { 
+  ArrowLeft, Plus, Megaphone, FileText, BookOpen, Loader2, Trash2, 
+  Calendar, Link as LinkIcon, Copy, Upload, File, Download, X 
+} from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -23,6 +26,10 @@ interface Post {
   teacher_id: string;
   session_link?: string | null;
   session_date?: string | null;
+  file_url?: string | null;
+  file_name?: string | null;
+  file_type?: string | null;
+  file_size?: number | null;
   profiles?: { full_name: string | null };
 }
 
@@ -37,11 +44,14 @@ export default function SubjectGroup() {
   const navigate = useNavigate();
   const { user, hasRole } = useAuth();
   const { t, language } = useLanguage();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [subject, setSubject] = useState<Subject | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [newPost, setNewPost] = useState({
     title: '',
     content: '',
@@ -52,6 +62,33 @@ export default function SubjectGroup() {
 
   const isTeacher = hasRole('teacher');
 
+  const texts = {
+    ar: {
+      attachFile: 'إرفاق ملف',
+      removeFile: 'إزالة الملف',
+      downloadFile: 'تحميل الملف',
+      fileAttached: 'ملف مرفق',
+      fileTypes: 'PDF, DOC, DOCX, PPT, PPTX, XLS, XLSX',
+      maxSize: 'الحد الأقصى: 10MB',
+      uploading: 'جاري رفع الملف...',
+      fileTooLarge: 'حجم الملف كبير جداً (الحد الأقصى 10MB)',
+      uploadError: 'حدث خطأ أثناء رفع الملف',
+    },
+    en: {
+      attachFile: 'Attach File',
+      removeFile: 'Remove File',
+      downloadFile: 'Download File',
+      fileAttached: 'File Attached',
+      fileTypes: 'PDF, DOC, DOCX, PPT, PPTX, XLS, XLSX',
+      maxSize: 'Max size: 10MB',
+      uploading: 'Uploading file...',
+      fileTooLarge: 'File too large (max 10MB)',
+      uploadError: 'Error uploading file',
+    },
+  };
+
+  const txt = texts[language];
+
   useEffect(() => {
     if (id) {
       fetchSubjectAndPosts();
@@ -61,7 +98,6 @@ export default function SubjectGroup() {
 
   const fetchSubjectAndPosts = async () => {
     try {
-      // Fetch subject details
       const { data: subjectData, error: subjectError } = await supabase
         .from('subjects')
         .select('*')
@@ -71,7 +107,6 @@ export default function SubjectGroup() {
       if (subjectError) throw subjectError;
       setSubject(subjectData);
 
-      // Fetch posts
       const { data: postsData, error: postsError } = await supabase
         .from('subject_posts')
         .select('*')
@@ -80,7 +115,6 @@ export default function SubjectGroup() {
 
       if (postsError) throw postsError;
 
-      // Fetch teacher profiles
       if (postsData && postsData.length > 0) {
         const teacherIds = [...new Set(postsData.map(p => p.teacher_id))];
         const { data: profiles } = await supabase
@@ -127,24 +161,76 @@ export default function SubjectGroup() {
     };
   };
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Check file size (10MB max)
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error(txt.fileTooLarge);
+      return;
+    }
+
+    setSelectedFile(file);
+  };
+
+  const uploadFile = async (): Promise<{ url: string; name: string; type: string; size: number } | null> => {
+    if (!selectedFile || !user) return null;
+
+    setUploadingFile(true);
+    try {
+      const fileExt = selectedFile.name.split('.').pop();
+      const fileName = `${id}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('subject-files')
+        .upload(fileName, selectedFile);
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from('subject-files')
+        .getPublicUrl(fileName);
+
+      return {
+        url: urlData.publicUrl,
+        name: selectedFile.name,
+        type: selectedFile.type || fileExt || 'unknown',
+        size: selectedFile.size,
+      };
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      toast.error(txt.uploadError);
+      return null;
+    } finally {
+      setUploadingFile(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !id) return;
 
     setSubmitting(true);
     try {
-      const insertData: any = {
+      let fileData = null;
+      if (selectedFile) {
+        fileData = await uploadFile();
+      }
+
+      const insertData = {
         subject_id: id,
         teacher_id: user.id,
         title: newPost.title,
         content: newPost.content,
         post_type: newPost.post_type,
+        session_link: newPost.post_type === 'schedule' ? newPost.session_link || null : null,
+        session_date: newPost.post_type === 'schedule' ? newPost.session_date || null : null,
+        file_url: fileData?.url || null,
+        file_name: fileData?.name || null,
+        file_type: fileData?.type || null,
+        file_size: fileData?.size || null,
       };
-      
-      if (newPost.post_type === 'schedule' && newPost.session_link) {
-        insertData.session_link = newPost.session_link;
-        insertData.session_date = newPost.session_date || null;
-      }
 
       const { error } = await supabase
         .from('subject_posts')
@@ -154,6 +240,7 @@ export default function SubjectGroup() {
 
       toast.success(t.common.success);
       setNewPost({ title: '', content: '', post_type: 'update', session_link: '', session_date: '' });
+      setSelectedFile(null);
       setShowForm(false);
       fetchSubjectAndPosts();
     } catch (error) {
@@ -164,8 +251,16 @@ export default function SubjectGroup() {
     }
   };
 
-  const handleDelete = async (postId: string) => {
+  const handleDelete = async (postId: string, fileUrl?: string | null) => {
     try {
+      // Delete file from storage if exists
+      if (fileUrl) {
+        const filePath = fileUrl.split('/subject-files/')[1];
+        if (filePath) {
+          await supabase.storage.from('subject-files').remove([filePath]);
+        }
+      }
+
       const { error } = await supabase
         .from('subject_posts')
         .delete()
@@ -179,6 +274,20 @@ export default function SubjectGroup() {
       console.error('Error deleting post:', error);
       toast.error(t.common.error);
     }
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  };
+
+  const getFileIcon = (type: string) => {
+    if (type.includes('pdf')) return '📄';
+    if (type.includes('word') || type.includes('doc')) return '📝';
+    if (type.includes('presentation') || type.includes('ppt')) return '📊';
+    if (type.includes('sheet') || type.includes('xls')) return '📈';
+    return '📎';
   };
 
   const getPostIcon = (type: string) => {
@@ -289,6 +398,7 @@ export default function SubjectGroup() {
                   </SelectContent>
                 </Select>
               </div>
+              
               {newPost.post_type === 'schedule' && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
@@ -317,11 +427,69 @@ export default function SubjectGroup() {
                   </div>
                 </div>
               )}
+
+              {/* File Upload */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium flex items-center gap-2">
+                  <Upload className="h-4 w-4" />
+                  {txt.attachFile}
+                </label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
+                {selectedFile ? (
+                  <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
+                    <File className="h-5 w-5 text-primary" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{selectedFile.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatFileSize(selectedFile.size)}
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setSelectedFile(null)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full"
+                  >
+                    <Upload className="h-4 w-4 me-2" />
+                    {txt.attachFile}
+                  </Button>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  {txt.fileTypes} • {txt.maxSize}
+                </p>
+              </div>
+
               <div className="flex gap-2">
-                <Button type="submit" disabled={submitting}>
-                  {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : t.groups.publish}
+                <Button type="submit" disabled={submitting || uploadingFile}>
+                  {submitting || uploadingFile ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin me-2" />
+                      {uploadingFile ? txt.uploading : t.groups.publish}
+                    </>
+                  ) : (
+                    t.groups.publish
+                  )}
                 </Button>
-                <Button type="button" variant="outline" onClick={() => setShowForm(false)}>
+                <Button type="button" variant="outline" onClick={() => {
+                  setShowForm(false);
+                  setSelectedFile(null);
+                }}>
                   Cancel
                 </Button>
               </div>
@@ -358,7 +526,7 @@ export default function SubjectGroup() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => handleDelete(post.id)}
+                      onClick={() => handleDelete(post.id, post.file_url)}
                     >
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
@@ -368,6 +536,33 @@ export default function SubjectGroup() {
               </CardHeader>
               <CardContent>
                 <p className="text-foreground whitespace-pre-wrap">{post.content}</p>
+                
+                {/* File Attachment */}
+                {post.file_url && post.file_name && (
+                  <div className="mt-4 p-3 bg-primary/5 border border-primary/20 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">{getFileIcon(post.file_type || '')}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm truncate">{post.file_name}</p>
+                        {post.file_size && (
+                          <p className="text-xs text-muted-foreground">
+                            {formatFileSize(post.file_size)}
+                          </p>
+                        )}
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        asChild
+                      >
+                        <a href={post.file_url} target="_blank" rel="noopener noreferrer" download>
+                          <Download className="h-4 w-4 me-1" />
+                          {txt.downloadFile}
+                        </a>
+                      </Button>
+                    </div>
+                  </div>
+                )}
                 
                 {/* Session Link for schedule posts */}
                 {post.post_type === 'schedule' && post.session_link && (
@@ -411,6 +606,7 @@ export default function SubjectGroup() {
                     </div>
                   </div>
                 )}
+                
                 <div className="flex items-center gap-2 mt-4 text-xs text-muted-foreground">
                   <span>{t.groups.postedBy}: {post.profiles?.full_name || 'Unknown'}</span>
                   <span>•</span>

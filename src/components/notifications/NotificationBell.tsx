@@ -113,6 +113,10 @@ export function NotificationBell() {
         return '👤';
       case 'session_reminder':
         return '⏰';
+      case 'new_subject_content':
+        return '📚';
+      case 'new_session_available':
+        return '🆕';
       default:
         return '🔔';
     }

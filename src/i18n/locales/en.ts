@@ -132,6 +132,15 @@ export const en = {
     postedBy: 'Posted by',
     timeAgo: 'ago',
   },
+  // Subscription
+  subscription: {
+    subscribed: 'Subscribed',
+    subscribe: 'Subscribe',
+    unsubscribe: 'Unsubscribe',
+    subscribedBadge: 'Subscribed ✓',
+    notSubscribed: 'Not Subscribed',
+    subscribeToAccess: 'Subscribe to access content',
+  },
   // Reviews
   reviews: {
     title: 'Reviews & Ratings',

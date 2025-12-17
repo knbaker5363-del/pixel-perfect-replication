@@ -33,17 +33,7 @@ Deno.serve(async (req) => {
     // Get pending reminders that should be sent now
     const { data: reminders, error: fetchError } = await supabase
       .from('scheduled_reminders')
-      .select(`
-        id,
-        user_id,
-        session_id,
-        reminder_type,
-        sessions (
-          title,
-          scheduled_at,
-          zoom_link
-        )
-      `)
+      .select('id, user_id, session_id, reminder_type')
       .eq('sent', false)
       .lte('scheduled_for', new Date().toISOString())
 
@@ -58,10 +48,17 @@ Deno.serve(async (req) => {
       )
     }
 
+    // Get session details separately
+    const sessionIds = [...new Set(reminders.map(r => r.session_id))]
+    const { data: sessions } = await supabase
+      .from('sessions')
+      .select('id, title, scheduled_at, zoom_link')
+      .in('id', sessionIds)
+
     let sentCount = 0
 
-    for (const reminder of reminders as unknown as ReminderData[]) {
-      const session = reminder.sessions
+    for (const reminder of reminders) {
+      const session = sessions?.find(s => s.id === reminder.session_id)
       
       if (!session) continue
 

@@ -1,12 +1,21 @@
 import { useEffect, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { BookOpen, Search, GraduationCap, User, Filter } from 'lucide-react';
+import { BookOpen, Search, GraduationCap, User, Filter, CheckCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
+import SubjectSubscribeDialog from '@/components/subjects/SubjectSubscribeDialog';
+
+interface SubjectPrice {
+  points_price: number;
+  money_price: number;
+  is_free: boolean;
+}
 
 interface Subject {
   id: string;
@@ -18,6 +27,8 @@ interface Subject {
     university_id: string | null;
     university?: { name: string } | null;
   } | null;
+  price?: SubjectPrice | null;
+  isSubscribed?: boolean;
 }
 
 interface University {
@@ -33,7 +44,10 @@ export default function Subjects() {
   const [search, setSearch] = useState('');
   const [selectedUniversity, setSelectedUniversity] = useState<string>('all');
   const [userUniversityId, setUserUniversityId] = useState<string | null>(null);
+  const [userPoints, setUserPoints] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [subscribeDialogOpen, setSubscribeDialogOpen] = useState(false);
+  const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
 
   const t = {
     ar: {
@@ -48,6 +62,9 @@ export default function Subjects() {
       allUniversities: 'جميع الجامعات',
       myUniversity: 'جامعتي',
       filterByUniversity: 'فلترة حسب الجامعة',
+      subscribed: 'مشترك ✓',
+      subscribe: 'اشتراك',
+      free: 'مجاني',
     },
     en: {
       title: 'Subjects',
@@ -61,10 +78,13 @@ export default function Subjects() {
       allUniversities: 'All Universities',
       myUniversity: 'My University',
       filterByUniversity: 'Filter by University',
+      subscribed: 'Subscribed ✓',
+      subscribe: 'Subscribe',
+      free: 'Free',
     },
   };
 
-  const text = t[language];
+  const text = t[language === 'ar' ? 'ar' : 'en'];
 
   useEffect(() => {
     fetchData();
@@ -82,18 +102,19 @@ export default function Subjects() {
       setUniversities(uniData);
     }
 
-    // Get user's university
+    // Get user's university and points
     if (user) {
       const { data: profile } = await supabase
         .from('profiles')
-        .select('university_id')
+        .select('university_id, points')
         .eq('user_id', user.id)
         .maybeSingle();
 
       if (profile?.university_id) {
         setUserUniversityId(profile.university_id);
-        setSelectedUniversity(profile.university_id); // Auto-select user's university
+        setSelectedUniversity(profile.university_id);
       }
+      setUserPoints(profile?.points || 0);
     }
 
     // Fetch approved subjects
@@ -104,27 +125,54 @@ export default function Subjects() {
       .order('name');
 
     if (subjectsData && subjectsData.length > 0) {
+      const subjectIds = subjectsData.map(s => s.id);
       const teacherIds = [...new Set(subjectsData.map(s => s.proposed_by).filter(Boolean))];
       
+      // Fetch prices
+      const { data: pricesData } = await supabase
+        .from('subject_prices')
+        .select('subject_id, points_price, money_price, is_free')
+        .in('subject_id', subjectIds);
+
+      // Fetch user subscriptions
+      let subscriptionsData: { subject_id: string }[] = [];
+      if (user) {
+        const { data: subs } = await supabase
+          .from('subject_subscriptions')
+          .select('subject_id')
+          .eq('student_id', user.id)
+          .eq('is_active', true);
+        subscriptionsData = subs || [];
+      }
+
+      let profiles: any[] = [];
       if (teacherIds.length > 0) {
-        const { data: profiles } = await supabase
+        const { data: profilesData } = await supabase
           .from('profiles')
           .select('user_id, full_name, university_id, university:university_id(name)')
           .in('user_id', teacherIds as string[]);
-
-        const subjectsWithTeachers = subjectsData.map(subject => ({
-          ...subject,
-          teacher: profiles?.find(p => p.user_id === subject.proposed_by) || null,
-        }));
-
-        setSubjects(subjectsWithTeachers as Subject[]);
-      } else {
-        setSubjects(subjectsData as Subject[]);
+        profiles = profilesData || [];
       }
+
+      const subjectsWithDetails = subjectsData.map(subject => ({
+        ...subject,
+        teacher: profiles.find(p => p.user_id === subject.proposed_by) || null,
+        price: pricesData?.find(p => p.subject_id === subject.id) || { points_price: 50, money_price: 10, is_free: false },
+        isSubscribed: subscriptionsData.some(s => s.subject_id === subject.id),
+      }));
+
+      setSubjects(subjectsWithDetails as Subject[]);
     } else {
       setSubjects([]);
     }
     setLoading(false);
+  };
+
+  const handleSubscribeClick = (e: React.MouseEvent, subject: Subject) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setSelectedSubject(subject);
+    setSubscribeDialogOpen(true);
   };
 
   const filteredSubjects = subjects.filter(s => {
@@ -195,7 +243,24 @@ export default function Subjects() {
                       <BookOpen className="w-6 h-6 text-primary" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold">{subject.name}</h3>
+                      <div className="flex items-center justify-between gap-2">
+                        <h3 className="font-semibold">{subject.name}</h3>
+                        {subject.isSubscribed ? (
+                          <Badge variant="secondary" className="text-green-600 flex-shrink-0">
+                            <CheckCircle className="w-3 h-3 me-1" />
+                            {text.subscribed}
+                          </Badge>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={(e) => handleSubscribeClick(e, subject)}
+                            className="flex-shrink-0"
+                          >
+                            {subject.price?.is_free ? text.free : text.subscribe}
+                          </Button>
+                        )}
+                      </div>
                       <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
                         {subject.description || text.noDescription}
                       </p>
@@ -226,6 +291,22 @@ export default function Subjects() {
           <BookOpen className="w-16 h-16 mx-auto mb-4 opacity-50" />
           <p className="text-lg">{text.noSubjects}</p>
         </div>
+      )}
+
+      {/* Subscribe Dialog */}
+      {selectedSubject && user && (
+        <SubjectSubscribeDialog
+          open={subscribeDialogOpen}
+          onOpenChange={setSubscribeDialogOpen}
+          subjectId={selectedSubject.id}
+          subjectName={selectedSubject.name}
+          pointsPrice={selectedSubject.price?.points_price || 50}
+          moneyPrice={selectedSubject.price?.money_price || 10}
+          isFree={selectedSubject.price?.is_free || false}
+          userPoints={userPoints}
+          userId={user.id}
+          onSuccess={fetchData}
+        />
       )}
     </div>
   );

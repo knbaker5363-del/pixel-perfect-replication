@@ -19,6 +19,7 @@ import SubjectGroup from "@/pages/SubjectGroup";
 import AdminUsers from "@/pages/AdminUsers";
 import AdminSettings from "@/pages/AdminSettings";
 import TeacherPanel from "@/pages/TeacherPanel";
+import TeacherProfile from "@/pages/TeacherProfile";
 import Profile from "@/pages/Profile";
 import NotFound from "@/pages/NotFound";
 
@@ -48,6 +49,7 @@ const App = () => (
               <Route path="/admin/settings" element={<DashboardLayout><AdminSettings /></DashboardLayout>} />
               <Route path="/teacher/panel" element={<DashboardLayout><TeacherPanel /></DashboardLayout>} />
               <Route path="/profile" element={<DashboardLayout><Profile /></DashboardLayout>} />
+              <Route path="/teacher/:teacherId" element={<DashboardLayout><TeacherProfile /></DashboardLayout>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </AuthProvider>

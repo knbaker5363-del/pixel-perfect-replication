@@ -218,7 +218,12 @@ export default function Sessions() {
             </div>
             <div className="flex items-center gap-2 text-sm">
               <span>{text.teacher}:</span>
-              <span className="font-medium">{session.profiles?.full_name || text.notSpecified}</span>
+              <Link 
+                to={`/teacher/${session.teacher_id}`}
+                className="font-medium hover:text-primary hover:underline transition-colors"
+              >
+                {session.profiles?.full_name || text.notSpecified}
+              </Link>
               <TeacherRatingBadge teacherId={session.teacher_id} />
               {session.subjects && (
                 <span className="text-muted-foreground">• {session.subjects.name}</span>

@@ -18,7 +18,7 @@ interface AuthContextType {
   profile: Profile | null;
   roles: AppRole[];
   loading: boolean;
-  signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null }>;
+  signUp: (email: string, password: string, fullName: string, universityId?: string) => Promise<{ error: Error | null; userId?: string }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   hasRole: (role: AppRole) => boolean;
@@ -77,9 +77,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  const signUp = async (email: string, password: string, fullName: string) => {
+  const signUp = async (email: string, password: string, fullName: string, universityId?: string) => {
     const redirectUrl = `${window.location.origin}/`;
-    const { error } = await supabase.auth.signUp({
+    const { error, data } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -87,7 +87,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         data: { full_name: fullName }
       }
     });
-    return { error };
+
+    // Update profile with university if provided
+    if (!error && data?.user?.id && universityId) {
+      await supabase
+        .from('profiles')
+        .update({ university_id: universityId })
+        .eq('user_id', data.user.id);
+    }
+
+    return { error, userId: data?.user?.id };
   };
 
   const signIn = async (email: string, password: string) => {

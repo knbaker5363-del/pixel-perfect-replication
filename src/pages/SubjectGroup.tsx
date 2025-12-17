@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { 
   ArrowLeft, Plus, Megaphone, FileText, BookOpen, Loader2, Trash2, 
-  Calendar, Link as LinkIcon, Copy, Upload, File, Download, X 
+  Calendar, Link as LinkIcon, Copy, Upload, File, Download, X, Lock, Coins 
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -16,6 +16,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 import { ar, enUS } from 'date-fns/locale';
+import SubjectSubscribeDialog from '@/components/subjects/SubjectSubscribeDialog';
 
 interface Post {
   id: string;
@@ -39,6 +40,12 @@ interface Subject {
   description: string | null;
 }
 
+interface SubjectPrice {
+  points_price: number;
+  money_price: number;
+  is_free: boolean;
+}
+
 export default function SubjectGroup() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -52,6 +59,9 @@ export default function SubjectGroup() {
   const [submitting, setSubmitting] = useState(false);
   const [uploadingFile, setUploadingFile] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isSubscribed, setIsSubscribed] = useState(false);
+  const [subjectPrice, setSubjectPrice] = useState<SubjectPrice | null>(null);
+  const [userPoints, setUserPoints] = useState(0);
   const [newPost, setNewPost] = useState({
     title: '',
     content: '',
@@ -61,6 +71,9 @@ export default function SubjectGroup() {
   });
 
   const isTeacher = hasRole('teacher');
+  const isAdmin = hasRole('admin');
+  const canAccessContent = isTeacher || isAdmin || isSubscribed;
+  const [subscribeDialogOpen, setSubscribeDialogOpen] = useState(false);
 
   const texts = {
     ar: {
@@ -73,6 +86,10 @@ export default function SubjectGroup() {
       uploading: 'جاري رفع الملف...',
       fileTooLarge: 'حجم الملف كبير جداً (الحد الأقصى 10MB)',
       uploadError: 'حدث خطأ أثناء رفع الملف',
+      subscribePrompt: 'اشترك في هذه المادة للوصول إلى المحتوى والإشعارات',
+      subscribeNow: 'اشتراك الآن',
+      points: 'نقطة',
+      free: 'مجاني',
     },
     en: {
       attachFile: 'Attach File',
@@ -84,6 +101,10 @@ export default function SubjectGroup() {
       uploading: 'Uploading file...',
       fileTooLarge: 'File too large (max 10MB)',
       uploadError: 'Error uploading file',
+      subscribePrompt: 'Subscribe to this subject to access content and notifications',
+      subscribeNow: 'Subscribe Now',
+      points: 'points',
+      free: 'Free',
     },
   };
 
@@ -106,6 +127,37 @@ export default function SubjectGroup() {
 
       if (subjectError) throw subjectError;
       setSubject(subjectData);
+
+      // Fetch price
+      const { data: priceData } = await supabase
+        .from('subject_prices')
+        .select('points_price, money_price, is_free')
+        .eq('subject_id', id)
+        .maybeSingle();
+      
+      setSubjectPrice(priceData || { points_price: 50, money_price: 10, is_free: false });
+
+      // Check subscription status
+      if (user) {
+        const { data: subData } = await supabase
+          .from('subject_subscriptions')
+          .select('id')
+          .eq('subject_id', id)
+          .eq('student_id', user.id)
+          .eq('is_active', true)
+          .maybeSingle();
+        
+        setIsSubscribed(!!subData);
+
+        // Get user points
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('points')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        
+        setUserPoints(profileData?.points || 0);
+      }
 
       const { data: postsData, error: postsError } = await supabase
         .from('subject_posts')
@@ -348,16 +400,46 @@ export default function SubjectGroup() {
             <p className="text-muted-foreground">{t.groups.title}</p>
           </div>
         </div>
-        {isTeacher && (
-          <Button onClick={() => setShowForm(!showForm)}>
-            <Plus className="h-4 w-4 me-2" />
-            {t.groups.newPost}
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {!canAccessContent && (
+            <Button onClick={() => setSubscribeDialogOpen(true)}>
+              <Coins className="h-4 w-4 me-2" />
+              {txt.subscribeNow}
+            </Button>
+          )}
+          {(isTeacher || isAdmin) && (
+            <Button onClick={() => setShowForm(!showForm)}>
+              <Plus className="h-4 w-4 me-2" />
+              {t.groups.newPost}
+            </Button>
+          )}
+        </div>
       </div>
 
+      {/* Subscription Prompt for non-subscribers */}
+      {!canAccessContent && (
+        <Card className="border-primary/50 bg-primary/5">
+          <CardContent className="py-8 text-center">
+            <Lock className="h-12 w-12 mx-auto mb-4 text-primary/60" />
+            <h3 className="text-lg font-semibold mb-2">{txt.subscribePrompt}</h3>
+            {subjectPrice && (
+              <p className="text-muted-foreground mb-4">
+                {subjectPrice.is_free 
+                  ? txt.free 
+                  : `${subjectPrice.points_price} ${txt.points}`
+                }
+              </p>
+            )}
+            <Button onClick={() => setSubscribeDialogOpen(true)}>
+              <Coins className="h-4 w-4 me-2" />
+              {txt.subscribeNow}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       {/* New Post Form */}
-      {showForm && isTeacher && (
+      {showForm && (isTeacher || isAdmin) && (
         <Card>
           <CardHeader>
             <CardTitle>{t.groups.newPost}</CardTitle>
@@ -498,129 +580,149 @@ export default function SubjectGroup() {
         </Card>
       )}
 
-      {/* Posts List */}
-      {posts.length === 0 ? (
-        <Card>
-          <CardContent className="py-8 text-center">
-            <p className="text-muted-foreground">{t.groups.noPosts}</p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-4">
-          {posts.map((post) => (
-            <Card key={post.id}>
-              <CardHeader className="pb-2">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-2">
-                    <Badge variant={getPostBadgeVariant(post.post_type)}>
-                      {getPostIcon(post.post_type)}
-                      <span className="ms-1">
-                        {post.post_type === 'announcement' && t.groups.announcement}
-                        {post.post_type === 'update' && t.groups.update}
-                        {post.post_type === 'resource' && t.groups.resource}
-                        {post.post_type === 'schedule' && (language === 'ar' ? 'جدول حصة' : 'Schedule')}
-                      </span>
-                    </Badge>
-                  </div>
-                  {user?.id === post.teacher_id && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleDelete(post.id, post.file_url)}
-                    >
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  )}
-                </div>
-                <CardTitle className="text-lg">{post.title}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-foreground whitespace-pre-wrap">{post.content}</p>
-                
-                {/* File Attachment */}
-                {post.file_url && post.file_name && (
-                  <div className="mt-4 p-3 bg-primary/5 border border-primary/20 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <span className="text-2xl">{getFileIcon(post.file_type || '')}</span>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm truncate">{post.file_name}</p>
-                        {post.file_size && (
-                          <p className="text-xs text-muted-foreground">
-                            {formatFileSize(post.file_size)}
-                          </p>
-                        )}
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        asChild
-                      >
-                        <a href={post.file_url} target="_blank" rel="noopener noreferrer" download>
-                          <Download className="h-4 w-4 me-1" />
-                          {txt.downloadFile}
-                        </a>
-                      </Button>
-                    </div>
-                  </div>
-                )}
-                
-                {/* Session Link for schedule posts */}
-                {post.post_type === 'schedule' && post.session_link && (
-                  <div className="mt-4 p-3 bg-muted rounded-lg space-y-2">
-                    {post.session_date && (
-                      <div className="flex items-center gap-2 text-sm">
-                        <Calendar className="h-4 w-4 text-primary" />
-                        <span className="font-medium">
-                          {new Date(post.session_date).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', {
-                            weekday: 'long',
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
-                        </span>
-                      </div>
-                    )}
-                    <div className="flex items-center gap-2">
-                      <LinkIcon className="h-4 w-4 text-primary" />
-                      <a 
-                        href={post.session_link} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="text-primary hover:underline text-sm truncate flex-1"
-                        dir="ltr"
-                      >
-                        {post.session_link}
-                      </a>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          navigator.clipboard.writeText(post.session_link || '');
-                          toast.success(language === 'ar' ? 'تم نسخ الرابط' : 'Link copied');
-                        }}
-                      >
-                        <Copy className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                )}
-                
-                <div className="flex items-center gap-2 mt-4 text-xs text-muted-foreground">
-                  <span>{t.groups.postedBy}: {post.profiles?.full_name || 'Unknown'}</span>
-                  <span>•</span>
-                  <span>
-                    {formatDistanceToNow(new Date(post.created_at), {
-                      addSuffix: true,
-                      locale: language === 'ar' ? ar : enUS,
-                    })}
-                  </span>
-                </div>
+      {/* Posts List - Only for subscribers/teachers/admins */}
+      {canAccessContent && (
+        <>
+          {posts.length === 0 ? (
+            <Card>
+              <CardContent className="py-8 text-center">
+                <p className="text-muted-foreground">{t.groups.noPosts}</p>
               </CardContent>
             </Card>
-          ))}
-        </div>
+          ) : (
+            <div className="space-y-4">
+              {posts.map((post) => (
+                <Card key={post.id}>
+                  <CardHeader className="pb-2">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-2">
+                        <Badge variant={getPostBadgeVariant(post.post_type)}>
+                          {getPostIcon(post.post_type)}
+                          <span className="ms-1">
+                            {post.post_type === 'announcement' && t.groups.announcement}
+                            {post.post_type === 'update' && t.groups.update}
+                            {post.post_type === 'resource' && t.groups.resource}
+                            {post.post_type === 'schedule' && (language === 'ar' ? 'جدول حصة' : 'Schedule')}
+                          </span>
+                        </Badge>
+                      </div>
+                      {user?.id === post.teacher_id && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDelete(post.id, post.file_url)}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      )}
+                    </div>
+                    <CardTitle className="text-lg">{post.title}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-foreground whitespace-pre-wrap">{post.content}</p>
+                    
+                    {/* File Attachment */}
+                    {post.file_url && post.file_name && (
+                      <div className="mt-4 p-3 bg-primary/5 border border-primary/20 rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <span className="text-2xl">{getFileIcon(post.file_type || '')}</span>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm truncate">{post.file_name}</p>
+                            {post.file_size && (
+                              <p className="text-xs text-muted-foreground">
+                                {formatFileSize(post.file_size)}
+                              </p>
+                            )}
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            asChild
+                          >
+                            <a href={post.file_url} target="_blank" rel="noopener noreferrer" download>
+                              <Download className="h-4 w-4 me-1" />
+                              {txt.downloadFile}
+                            </a>
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Session Link for schedule posts */}
+                    {post.post_type === 'schedule' && post.session_link && (
+                      <div className="mt-4 p-3 bg-muted rounded-lg space-y-2">
+                        {post.session_date && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <Calendar className="h-4 w-4 text-primary" />
+                            <span className="font-medium">
+                              {new Date(post.session_date).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', {
+                                weekday: 'long',
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </span>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-2">
+                          <LinkIcon className="h-4 w-4 text-primary" />
+                          <a 
+                            href={post.session_link} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-primary hover:underline text-sm truncate flex-1"
+                            dir="ltr"
+                          >
+                            {post.session_link}
+                          </a>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              navigator.clipboard.writeText(post.session_link || '');
+                              toast.success(language === 'ar' ? 'تم نسخ الرابط' : 'Link copied');
+                            }}
+                          >
+                            <Copy className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                    
+                    <div className="flex items-center gap-2 mt-4 text-xs text-muted-foreground">
+                      <span>{t.groups.postedBy}: {post.profiles?.full_name || 'Unknown'}</span>
+                      <span>•</span>
+                      <span>
+                        {formatDistanceToNow(new Date(post.created_at), {
+                          addSuffix: true,
+                          locale: language === 'ar' ? ar : enUS,
+                        })}
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Subscribe Dialog */}
+      {subject && user && subjectPrice && (
+        <SubjectSubscribeDialog
+          open={subscribeDialogOpen}
+          onOpenChange={setSubscribeDialogOpen}
+          subjectId={subject.id}
+          subjectName={subject.name}
+          pointsPrice={subjectPrice.points_price}
+          moneyPrice={subjectPrice.money_price}
+          isFree={subjectPrice.is_free}
+          userPoints={userPoints}
+          userId={user.id}
+          onSuccess={fetchSubjectAndPosts}
+        />
       )}
     </div>
   );

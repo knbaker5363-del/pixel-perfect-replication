@@ -414,6 +414,82 @@ export type Database = {
           },
         ]
       }
+      subject_prices: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_free: boolean | null
+          money_price: number | null
+          points_price: number | null
+          subject_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_free?: boolean | null
+          money_price?: number | null
+          points_price?: number | null
+          subject_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_free?: boolean | null
+          money_price?: number | null
+          points_price?: number | null
+          subject_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subject_prices_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: true
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subject_subscriptions: {
+        Row: {
+          amount_paid: number
+          expires_at: string | null
+          id: string
+          is_active: boolean | null
+          payment_type: string
+          student_id: string
+          subject_id: string
+          subscribed_at: string | null
+        }
+        Insert: {
+          amount_paid?: number
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          payment_type?: string
+          student_id: string
+          subject_id: string
+          subscribed_at?: string | null
+        }
+        Update: {
+          amount_paid?: number
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          payment_type?: string
+          student_id?: string
+          subject_id?: string
+          subscribed_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subject_subscriptions_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subjects: {
         Row: {
           created_at: string | null

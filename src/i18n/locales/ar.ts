@@ -132,6 +132,15 @@ export const ar = {
     postedBy: 'نشر بواسطة',
     timeAgo: 'منذ',
   },
+  // Subscription
+  subscription: {
+    subscribed: 'مشترك',
+    subscribe: 'اشتراك',
+    unsubscribe: 'إلغاء الاشتراك',
+    subscribedBadge: 'مشترك ✓',
+    notSubscribed: 'غير مشترك',
+    subscribeToAccess: 'اشترك للوصول إلى المحتوى',
+  },
   // Reviews
   reviews: {
     title: 'التقييمات والمراجعات',

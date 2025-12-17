@@ -132,4 +132,22 @@ export const ar = {
     postedBy: 'نشر بواسطة',
     timeAgo: 'منذ',
   },
+  // Reviews
+  reviews: {
+    title: 'التقييمات والمراجعات',
+    rateSession: 'تقييم الجلسة',
+    howWasExperience: 'كيف كانت تجربتك في هذه الجلسة؟',
+    writeComment: 'اكتب تعليقك (اختياري)',
+    commentPlaceholder: 'شاركنا رأيك عن الجلسة والمعلم...',
+    submit: 'إرسال التقييم',
+    submitting: 'جاري الإرسال...',
+    selectRating: 'يرجى اختيار تقييم',
+    success: 'تم إرسال تقييمك بنجاح',
+    error: 'حدث خطأ أثناء إرسال التقييم',
+    alreadyReviewed: 'لقد قمت بتقييم هذه الجلسة مسبقاً',
+    averageRating: 'متوسط التقييم',
+    totalReviews: 'تقييم',
+    noReviews: 'لا توجد تقييمات بعد',
+    reviewed: 'تم التقييم ✓',
+  },
 };

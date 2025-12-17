@@ -132,4 +132,22 @@ export const en = {
     postedBy: 'Posted by',
     timeAgo: 'ago',
   },
+  // Reviews
+  reviews: {
+    title: 'Reviews & Ratings',
+    rateSession: 'Rate Session',
+    howWasExperience: 'How was your experience in this session?',
+    writeComment: 'Write your comment (optional)',
+    commentPlaceholder: 'Share your thoughts about the session and teacher...',
+    submit: 'Submit Review',
+    submitting: 'Submitting...',
+    selectRating: 'Please select a rating',
+    success: 'Your review was submitted successfully',
+    error: 'An error occurred while submitting your review',
+    alreadyReviewed: 'You have already reviewed this session',
+    averageRating: 'Average Rating',
+    totalReviews: 'reviews',
+    noReviews: 'No reviews yet',
+    reviewed: 'Reviewed ✓',
+  },
 };

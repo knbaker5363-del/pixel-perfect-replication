@@ -18,9 +18,15 @@ import Notifications from "@/pages/Notifications";
 import SubjectGroup from "@/pages/SubjectGroup";
 import AdminUsers from "@/pages/AdminUsers";
 import AdminSettings from "@/pages/AdminSettings";
+import AdminAnalytics from "@/pages/AdminAnalytics";
 import TeacherPanel from "@/pages/TeacherPanel";
 import TeacherProfile from "@/pages/TeacherProfile";
+import TeacherWallet from "@/pages/TeacherWallet";
 import Profile from "@/pages/Profile";
+import Messages from "@/pages/Messages";
+import Quizzes from "@/pages/Quizzes";
+import CreateQuiz from "@/pages/CreateQuiz";
+import TakeQuiz from "@/pages/TakeQuiz";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -45,9 +51,15 @@ const App = () => (
               <Route path="/notes" element={<DashboardLayout><Notes /></DashboardLayout>} />
               <Route path="/todos" element={<DashboardLayout><Todos /></DashboardLayout>} />
               <Route path="/notifications" element={<DashboardLayout><Notifications /></DashboardLayout>} />
+              <Route path="/messages" element={<DashboardLayout><Messages /></DashboardLayout>} />
+              <Route path="/quizzes" element={<DashboardLayout><Quizzes /></DashboardLayout>} />
+              <Route path="/quizzes/create" element={<DashboardLayout><CreateQuiz /></DashboardLayout>} />
+              <Route path="/quizzes/:id/take" element={<DashboardLayout><TakeQuiz /></DashboardLayout>} />
               <Route path="/admin/users" element={<DashboardLayout><AdminUsers /></DashboardLayout>} />
               <Route path="/admin/settings" element={<DashboardLayout><AdminSettings /></DashboardLayout>} />
+              <Route path="/admin/analytics" element={<DashboardLayout><AdminAnalytics /></DashboardLayout>} />
               <Route path="/teacher/panel" element={<DashboardLayout><TeacherPanel /></DashboardLayout>} />
+              <Route path="/teacher/wallet" element={<DashboardLayout><TeacherWallet /></DashboardLayout>} />
               <Route path="/profile" element={<DashboardLayout><Profile /></DashboardLayout>} />
               <Route path="/teacher/:teacherId" element={<DashboardLayout><TeacherProfile /></DashboardLayout>} />
               <Route path="*" element={<NotFound />} />

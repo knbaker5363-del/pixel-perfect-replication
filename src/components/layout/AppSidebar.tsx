@@ -10,7 +10,11 @@ import {
   LogOut,
   Bell,
   GraduationCap,
-  User
+  User,
+  MessageCircle,
+  Wallet,
+  BarChart3,
+  ClipboardList
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useAuth } from '@/contexts/AuthContext';
@@ -36,13 +40,21 @@ const mainNavItems = [
   { title: 'لوحة التحكم', url: '/dashboard', icon: LayoutDashboard },
   { title: 'المواد', url: '/subjects', icon: BookOpen },
   { title: 'الجلسات', url: '/sessions', icon: Calendar },
+  { title: 'الاختبارات', url: '/quizzes', icon: ClipboardList },
+  { title: 'الرسائل', url: '/messages', icon: MessageCircle },
   { title: 'الملاحظات', url: '/notes', icon: StickyNote },
   { title: 'المهام', url: '/todos', icon: CheckSquare },
   { title: 'الإشعارات', url: '/notifications', icon: Bell },
 ];
 
+const teacherNavItems = [
+  { title: 'لوحة المعلم', url: '/teacher/panel', icon: GraduationCap },
+  { title: 'المحفظة', url: '/teacher/wallet', icon: Wallet },
+];
+
 const adminNavItems = [
   { title: 'المستخدمين', url: '/admin/users', icon: Users },
+  { title: 'التحليلات', url: '/admin/analytics', icon: BarChart3 },
   { title: 'الإعدادات', url: '/admin/settings', icon: Settings },
 ];
 
@@ -121,23 +133,25 @@ export function AppSidebar() {
             </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                <SidebarMenuItem>
-                  <SidebarMenuButton 
-                    asChild 
-                    isActive={isActive('/teacher/panel')}
-                    tooltip="لوحة المعلم"
-                  >
-                    <NavLink 
-                      to="/teacher/panel" 
-                      end 
-                      className="flex items-center gap-3"
-                      activeClassName="bg-accent text-accent-foreground"
+                {teacherNavItems.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton 
+                      asChild 
+                      isActive={isActive(item.url)}
+                      tooltip={item.title}
                     >
-                      <GraduationCap className="w-5 h-5 flex-shrink-0" />
-                      {!collapsed && <span>لوحة المعلم</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
+                      <NavLink 
+                        to={item.url} 
+                        end 
+                        className="flex items-center gap-3"
+                        activeClassName="bg-accent text-accent-foreground"
+                      >
+                        <item.icon className="w-5 h-5 flex-shrink-0" />
+                        {!collapsed && <span>{item.title}</span>}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>

@@ -87,6 +87,115 @@ export type Database = {
           },
         ]
       }
+      certificates: {
+        Row: {
+          certificate_number: string
+          id: string
+          issued_at: string | null
+          quizzes_passed: number | null
+          sessions_completed: number | null
+          student_id: string
+          student_name: string
+          subject_id: string
+          subject_name: string
+        }
+        Insert: {
+          certificate_number: string
+          id?: string
+          issued_at?: string | null
+          quizzes_passed?: number | null
+          sessions_completed?: number | null
+          student_id: string
+          student_name: string
+          subject_id: string
+          subject_name: string
+        }
+        Update: {
+          certificate_number?: string
+          id?: string
+          issued_at?: string | null
+          quizzes_passed?: number | null
+          sessions_completed?: number | null
+          student_id?: string
+          student_name?: string
+          subject_id?: string
+          subject_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "certificates_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_conversations: {
+        Row: {
+          created_at: string | null
+          id: string
+          last_message_at: string | null
+          student_id: string
+          teacher_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          last_message_at?: string | null
+          student_id: string
+          teacher_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          last_message_at?: string | null
+          student_id?: string
+          teacher_id?: string
+        }
+        Relationships: []
+      }
+      chat_messages: {
+        Row: {
+          content: string | null
+          conversation_id: string
+          created_at: string | null
+          file_name: string | null
+          file_url: string | null
+          id: string
+          is_read: boolean | null
+          sender_id: string
+        }
+        Insert: {
+          content?: string | null
+          conversation_id: string
+          created_at?: string | null
+          file_name?: string | null
+          file_url?: string | null
+          id?: string
+          is_read?: boolean | null
+          sender_id: string
+        }
+        Update: {
+          content?: string | null
+          conversation_id?: string
+          created_at?: string | null
+          file_name?: string | null
+          file_url?: string | null
+          id?: string
+          is_read?: boolean | null
+          sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "chat_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notes: {
         Row: {
           content: string | null
@@ -158,6 +267,30 @@ export type Database = {
         }
         Relationships: []
       }
+      platform_settings: {
+        Row: {
+          id: string
+          key: string
+          updated_at: string | null
+          updated_by: string | null
+          value: Json
+        }
+        Insert: {
+          id?: string
+          key: string
+          updated_at?: string | null
+          updated_by?: string | null
+          value: Json
+        }
+        Update: {
+          id?: string
+          key?: string
+          updated_at?: string | null
+          updated_by?: string | null
+          value?: Json
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -204,6 +337,201 @@ export type Database = {
             columns: ["university_id"]
             isOneToOne: false
             referencedRelation: "universities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quiz_answers: {
+        Row: {
+          attempt_id: string
+          id: string
+          is_correct: boolean | null
+          question_id: string
+          selected_option_id: string | null
+        }
+        Insert: {
+          attempt_id: string
+          id?: string
+          is_correct?: boolean | null
+          question_id: string
+          selected_option_id?: string | null
+        }
+        Update: {
+          attempt_id?: string
+          id?: string
+          is_correct?: boolean | null
+          question_id?: string
+          selected_option_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quiz_answers_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: false
+            referencedRelation: "quiz_attempts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quiz_answers_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "quiz_questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quiz_answers_selected_option_id_fkey"
+            columns: ["selected_option_id"]
+            isOneToOne: false
+            referencedRelation: "quiz_options"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quiz_attempts: {
+        Row: {
+          completed_at: string | null
+          id: string
+          passed: boolean | null
+          quiz_id: string
+          score: number | null
+          started_at: string | null
+          student_id: string
+          total_points: number | null
+        }
+        Insert: {
+          completed_at?: string | null
+          id?: string
+          passed?: boolean | null
+          quiz_id: string
+          score?: number | null
+          started_at?: string | null
+          student_id: string
+          total_points?: number | null
+        }
+        Update: {
+          completed_at?: string | null
+          id?: string
+          passed?: boolean | null
+          quiz_id?: string
+          score?: number | null
+          started_at?: string | null
+          student_id?: string
+          total_points?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quiz_attempts_quiz_id_fkey"
+            columns: ["quiz_id"]
+            isOneToOne: false
+            referencedRelation: "quizzes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quiz_options: {
+        Row: {
+          id: string
+          is_correct: boolean | null
+          option_order: number | null
+          option_text: string
+          question_id: string
+        }
+        Insert: {
+          id?: string
+          is_correct?: boolean | null
+          option_order?: number | null
+          option_text: string
+          question_id: string
+        }
+        Update: {
+          id?: string
+          is_correct?: boolean | null
+          option_order?: number | null
+          option_text?: string
+          question_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quiz_options_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "quiz_questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quiz_questions: {
+        Row: {
+          id: string
+          points: number | null
+          question_order: number | null
+          question_text: string
+          quiz_id: string
+        }
+        Insert: {
+          id?: string
+          points?: number | null
+          question_order?: number | null
+          question_text: string
+          quiz_id: string
+        }
+        Update: {
+          id?: string
+          points?: number | null
+          question_order?: number | null
+          question_text?: string
+          quiz_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quiz_questions_quiz_id_fkey"
+            columns: ["quiz_id"]
+            isOneToOne: false
+            referencedRelation: "quizzes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quizzes: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          duration_minutes: number | null
+          id: string
+          is_active: boolean | null
+          passing_score: number | null
+          subject_id: string
+          teacher_id: string
+          title: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          duration_minutes?: number | null
+          id?: string
+          is_active?: boolean | null
+          passing_score?: number | null
+          subject_id: string
+          teacher_id: string
+          title: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          duration_minutes?: number | null
+          id?: string
+          is_active?: boolean | null
+          passing_score?: number | null
+          subject_id?: string
+          teacher_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quizzes_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
             referencedColumns: ["id"]
           },
         ]
@@ -275,6 +603,44 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      session_attendance: {
+        Row: {
+          id: string
+          marked_at: string | null
+          marked_by: string
+          notes: string | null
+          session_id: string
+          status: string | null
+          student_id: string
+        }
+        Insert: {
+          id?: string
+          marked_at?: string | null
+          marked_by: string
+          notes?: string | null
+          session_id: string
+          status?: string | null
+          student_id: string
+        }
+        Update: {
+          id?: string
+          marked_at?: string | null
+          marked_by?: string
+          notes?: string | null
+          session_id?: string
+          status?: string | null
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_attendance_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       session_enrollments: {
         Row: {
@@ -692,6 +1058,45 @@ export type Database = {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
+        }
+        Relationships: []
+      }
+      withdrawal_requests: {
+        Row: {
+          admin_notes: string | null
+          amount: number
+          id: string
+          payment_details: string | null
+          payment_method: string | null
+          processed_at: string | null
+          processed_by: string | null
+          requested_at: string | null
+          status: string | null
+          teacher_id: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          amount: number
+          id?: string
+          payment_details?: string | null
+          payment_method?: string | null
+          processed_at?: string | null
+          processed_by?: string | null
+          requested_at?: string | null
+          status?: string | null
+          teacher_id: string
+        }
+        Update: {
+          admin_notes?: string | null
+          amount?: number
+          id?: string
+          payment_details?: string | null
+          payment_method?: string | null
+          processed_at?: string | null
+          processed_by?: string | null
+          requested_at?: string | null
+          status?: string | null
+          teacher_id?: string
         }
         Relationships: []
       }

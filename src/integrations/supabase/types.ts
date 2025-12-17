@@ -362,6 +362,10 @@ export type Database = {
         Row: {
           content: string
           created_at: string | null
+          file_name: string | null
+          file_size: number | null
+          file_type: string | null
+          file_url: string | null
           id: string
           post_type: string | null
           session_date: string | null
@@ -373,6 +377,10 @@ export type Database = {
         Insert: {
           content: string
           created_at?: string | null
+          file_name?: string | null
+          file_size?: number | null
+          file_type?: string | null
+          file_url?: string | null
           id?: string
           post_type?: string | null
           session_date?: string | null
@@ -384,6 +392,10 @@ export type Database = {
         Update: {
           content?: string
           created_at?: string | null
+          file_name?: string | null
+          file_size?: number | null
+          file_type?: string | null
+          file_url?: string | null
           id?: string
           post_type?: string | null
           session_date?: string | null

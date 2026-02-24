@@ -28,6 +28,7 @@ import Quizzes from "@/pages/Quizzes";
 import CreateQuiz from "@/pages/CreateQuiz";
 import TakeQuiz from "@/pages/TakeQuiz";
 import MySubscriptions from "@/pages/MySubscriptions";
+import SubjectDetails from "@/pages/SubjectDetails";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -47,6 +48,7 @@ const App = () => (
               <Route path="/dashboard" element={<DashboardLayout><Dashboard /></DashboardLayout>} />
               <Route path="/subjects" element={<DashboardLayout><Subjects /></DashboardLayout>} />
               <Route path="/subjects/:id/group" element={<DashboardLayout><SubjectGroup /></DashboardLayout>} />
+              <Route path="/subjects/:id/details" element={<DashboardLayout><SubjectDetails /></DashboardLayout>} />
               <Route path="/sessions" element={<DashboardLayout><Sessions /></DashboardLayout>} />
               <Route path="/sessions/create" element={<DashboardLayout><CreateSession /></DashboardLayout>} />
               <Route path="/notes" element={<DashboardLayout><Notes /></DashboardLayout>} />

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { User, GraduationCap, MapPin, Save, Loader2 } from 'lucide-react';
+import { User, GraduationCap, MapPin, Save, Loader2, Camera, Copy, Check } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -28,6 +28,7 @@ interface ProfileData {
   bio: string | null;
   is_profile_public: boolean;
   points: number;
+  display_id: string | null;
 }
 
 export default function Profile() {
@@ -35,7 +36,10 @@ export default function Profile() {
   const { language } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [universities, setUniversities] = useState<University[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [profile, setProfile] = useState<ProfileData>({
     full_name: '',
     avatar_url: null,
@@ -43,7 +47,8 @@ export default function Profile() {
     education_place: '',
     bio: '',
     is_profile_public: false,
-    points: 0
+    points: 0,
+    display_id: null
   });
 
   useEffect(() => {
@@ -54,19 +59,12 @@ export default function Profile() {
     if (!user) return;
 
     try {
-      // Fetch universities
-      const { data: univData } = await supabase
-        .from('universities')
-        .select('*')
-        .eq('is_active', true);
+      const [{ data: univData }, { data: profileData }] = await Promise.all([
+        supabase.from('universities').select('*').eq('is_active', true),
+        supabase.from('profiles').select('*').eq('user_id', user.id).maybeSingle()
+      ]);
+      
       setUniversities(univData || []);
-
-      // Fetch profile
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', user.id)
-        .maybeSingle();
 
       if (profileData) {
         setProfile({
@@ -76,7 +74,8 @@ export default function Profile() {
           education_place: profileData.education_place || '',
           bio: profileData.bio || '',
           is_profile_public: profileData.is_profile_public || false,
-          points: profileData.points || 0
+          points: profileData.points || 0,
+          display_id: (profileData as any).display_id || null
         });
       }
     } catch (error) {
@@ -86,9 +85,54 @@ export default function Profile() {
     }
   };
 
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error(language === 'ar' ? 'يرجى اختيار صورة' : 'Please select an image');
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error(language === 'ar' ? 'الحد الأقصى 2 ميجابايت' : 'Max size is 2MB');
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const ext = file.name.split('.').pop();
+      const filePath = `${user.id}/avatar.${ext}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      const avatarUrl = `${publicUrl}?t=${Date.now()}`;
+
+      await supabase
+        .from('profiles')
+        .update({ avatar_url: avatarUrl })
+        .eq('user_id', user.id);
+
+      setProfile(prev => ({ ...prev, avatar_url: avatarUrl }));
+      toast.success(language === 'ar' ? 'تم تحديث الصورة' : 'Avatar updated');
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast.error(language === 'ar' ? 'فشل رفع الصورة' : 'Failed to upload');
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const handleSave = async () => {
     if (!user) return;
-
     setSaving(true);
     try {
       const { error } = await supabase
@@ -103,13 +147,20 @@ export default function Profile() {
         .eq('user_id', user.id);
 
       if (error) throw error;
-
       toast.success(language === 'ar' ? 'تم حفظ التغييرات' : 'Changes saved');
     } catch (error) {
       console.error('Error saving profile:', error);
       toast.error(language === 'ar' ? 'فشل في حفظ التغييرات' : 'Failed to save changes');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const copyId = () => {
+    if (profile.display_id) {
+      navigator.clipboard.writeText(profile.display_id);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
     }
   };
 
@@ -149,12 +200,32 @@ export default function Profile() {
       <Card>
         <CardContent className="pt-6">
           <div className="flex items-center gap-4">
-            <Avatar className="h-20 w-20 border-4 border-border">
-              <AvatarImage src={profile.avatar_url || undefined} />
-              <AvatarFallback className="text-2xl bg-primary text-primary-foreground">
-                {getInitials(profile.full_name)}
-              </AvatarFallback>
-            </Avatar>
+            <div className="relative group">
+              <Avatar className="h-20 w-20 border-4 border-border">
+                <AvatarImage src={profile.avatar_url || undefined} />
+                <AvatarFallback className="text-2xl bg-primary text-primary-foreground">
+                  {getInitials(profile.full_name)}
+                </AvatarFallback>
+              </Avatar>
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+              >
+                {uploading ? (
+                  <Loader2 className="h-5 w-5 text-white animate-spin" />
+                ) : (
+                  <Camera className="h-5 w-5 text-white" />
+                )}
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleAvatarUpload}
+              />
+            </div>
             <div className="flex-1">
               <h2 className="text-xl font-bold">{profile.full_name || (language === 'ar' ? 'مستخدم' : 'User')}</h2>
               <div className="flex items-center gap-2 mt-1">
@@ -163,6 +234,16 @@ export default function Profile() {
                   {profile.points} {language === 'ar' ? 'نقطة' : 'points'}
                 </span>
               </div>
+              {profile.display_id && (
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-xs font-mono text-muted-foreground bg-muted px-2 py-0.5 rounded">
+                    {profile.display_id}
+                  </span>
+                  <button onClick={copyId} className="text-muted-foreground hover:text-foreground">
+                    {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                  </button>
+                </div>
+              )}
               <p className="text-sm text-muted-foreground mt-1">{user?.email}</p>
             </div>
           </div>
@@ -186,7 +267,6 @@ export default function Profile() {
               placeholder={language === 'ar' ? 'أدخل اسمك الكامل' : 'Enter your full name'}
             />
           </div>
-
           <div className="space-y-2">
             <Label>{language === 'ar' ? 'نبذة عنك' : 'Bio'}</Label>
             <Textarea
@@ -234,7 +314,6 @@ export default function Profile() {
               </SelectContent>
             </Select>
           </div>
-
           <div className="space-y-2">
             <Label className="flex items-center gap-2">
               <MapPin className="h-4 w-4" />

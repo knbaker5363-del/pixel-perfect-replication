@@ -296,6 +296,7 @@ export type Database = {
           avatar_url: string | null
           bio: string | null
           created_at: string | null
+          display_id: string | null
           education_place: string | null
           full_name: string | null
           id: string
@@ -309,6 +310,7 @@ export type Database = {
           avatar_url?: string | null
           bio?: string | null
           created_at?: string | null
+          display_id?: string | null
           education_place?: string | null
           full_name?: string | null
           id?: string
@@ -322,6 +324,7 @@ export type Database = {
           avatar_url?: string | null
           bio?: string | null
           created_at?: string | null
+          display_id?: string | null
           education_place?: string | null
           full_name?: string | null
           id?: string
@@ -783,6 +786,8 @@ export type Database = {
       subject_prices: {
         Row: {
           created_at: string | null
+          duration_type: string | null
+          duration_value: number | null
           id: string
           is_free: boolean | null
           money_price: number | null
@@ -791,6 +796,8 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          duration_type?: string | null
+          duration_value?: number | null
           id?: string
           is_free?: boolean | null
           money_price?: number | null
@@ -799,6 +806,8 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          duration_type?: string | null
+          duration_value?: number | null
           id?: string
           is_free?: boolean | null
           money_price?: number | null
@@ -862,24 +871,30 @@ export type Database = {
           description: string | null
           id: string
           name: string
+          objectives: string | null
           proposed_by: string | null
           status: string | null
+          syllabus: string | null
         }
         Insert: {
           created_at?: string | null
           description?: string | null
           id?: string
           name: string
+          objectives?: string | null
           proposed_by?: string | null
           status?: string | null
+          syllabus?: string | null
         }
         Update: {
           created_at?: string | null
           description?: string | null
           id?: string
           name?: string
+          objectives?: string | null
           proposed_by?: string | null
           status?: string | null
+          syllabus?: string | null
         }
         Relationships: []
       }

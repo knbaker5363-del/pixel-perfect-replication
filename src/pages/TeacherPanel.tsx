@@ -48,7 +48,7 @@ export default function TeacherPanel() {
   const [mySubjects, setMySubjects] = useState<Subject[]>([]);
   const [loading, setLoading] = useState(true);
   const [proposingSubject, setProposingSubject] = useState(false);
-  const [newSubject, setNewSubject] = useState({ name: '', description: '' });
+  const [newSubject, setNewSubject] = useState({ name: '', description: '', objectives: '', syllabus: '', duration_type: 'semester', duration_value: 1, points_price: 50 });
   const [submitting, setSubmitting] = useState(false);
   const [stats, setStats] = useState({
     unreadMessages: 0,
@@ -177,19 +177,39 @@ export default function TeacherPanel() {
 
     setSubmitting(true);
     try {
-      const { error } = await supabase
+      const { data: subjectData, error } = await supabase
         .from('subjects')
         .insert({
           name: newSubject.name,
           description: newSubject.description,
           proposed_by: user.id,
           status: 'pending'
-        });
+        })
+        .select('id')
+        .single();
 
       if (error) throw error;
 
+      // Insert price info
+      if (subjectData) {
+        await supabase.from('subject_prices').insert({
+          subject_id: subjectData.id,
+          points_price: newSubject.points_price,
+          is_free: newSubject.points_price === 0,
+        });
+
+        // Update subject with objectives/syllabus (using raw update since types may not be regenerated yet)
+        await supabase
+          .from('subjects')
+          .update({
+            objectives: newSubject.objectives || null,
+            syllabus: newSubject.syllabus || null,
+          } as any)
+          .eq('id', subjectData.id);
+      }
+
       toast.success(language === 'ar' ? 'تم إرسال الاقتراح للمراجعة' : 'Proposal submitted for review');
-      setNewSubject({ name: '', description: '' });
+      setNewSubject({ name: '', description: '', objectives: '', syllabus: '', duration_type: 'semester', duration_value: 1, points_price: 50 });
       setProposingSubject(false);
       fetchData();
     } catch (error) {
@@ -384,6 +404,39 @@ export default function TeacherPanel() {
                       value={newSubject.description}
                       onChange={(e) => setNewSubject({ ...newSubject, description: e.target.value })}
                       rows={3}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">
+                      {language === 'ar' ? 'أهداف المادة' : 'Objectives'}
+                    </label>
+                    <Textarea
+                      value={newSubject.objectives}
+                      onChange={(e) => setNewSubject({ ...newSubject, objectives: e.target.value })}
+                      placeholder={language === 'ar' ? 'اكتب أهداف المادة...' : 'Write course objectives...'}
+                      rows={3}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">
+                      {language === 'ar' ? 'المنهج الدراسي' : 'Syllabus'}
+                    </label>
+                    <Textarea
+                      value={newSubject.syllabus}
+                      onChange={(e) => setNewSubject({ ...newSubject, syllabus: e.target.value })}
+                      placeholder={language === 'ar' ? 'اكتب المنهج الدراسي...' : 'Write the syllabus...'}
+                      rows={3}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">
+                      {language === 'ar' ? 'السعر بالنقاط (0 = مجاني)' : 'Price in points (0 = free)'}
+                    </label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={newSubject.points_price}
+                      onChange={(e) => setNewSubject({ ...newSubject, points_price: parseInt(e.target.value) || 0 })}
                     />
                   </div>
                   <div className="flex gap-2">

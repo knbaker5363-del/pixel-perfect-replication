@@ -235,7 +235,7 @@ export default function Subjects() {
       ) : filteredSubjects.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredSubjects.map((subject) => (
-            <Link key={subject.id} to={`/subjects/${subject.id}/group`}>
+            <Link key={subject.id} to={`/subjects/${subject.id}/details`}>
               <Card className="border-border/50 hover:border-primary/50 transition-colors cursor-pointer h-full">
                 <CardContent className="p-4">
                   <div className="flex items-start gap-4">

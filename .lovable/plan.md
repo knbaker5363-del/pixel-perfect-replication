@@ -1,92 +1,91 @@
 
 
-## خطة التنفيذ المقترحة:
+## تقرير المحاكاة الداخلية - المشاكل والنواقص
 
-### 1️⃣ إضافة رقم ID مميز لكل حساب
-**تغييرات قاعدة البيانات:**
-```sql
--- إضافة عمود display_id للملفات الشخصية
-ALTER TABLE profiles ADD COLUMN display_id TEXT UNIQUE;
-
--- إنشاء trigger لتوليد ID تلقائياً
--- الطالب: STU00001
--- المعلم: TCH00001
--- الأدمن: ADM00001
-```
-
-**تغييرات الواجهة:**
-- عرض الـ ID في صفحة `Profile.tsx`
-- عرض الـ ID في بطاقة المستخدم في الـ Header
+### سيناريو المحاكاة
+محاكاة 4 طلاب من جامعتين + 2 معلمين + 1 أدمن عبر جميع مسارات الاستخدام.
 
 ---
 
-### 2️⃣ إضافة رفع صور البروفايل
-**تغييرات قاعدة البيانات:**
-```sql
--- إنشاء bucket جديد لصور البروفايل
-INSERT INTO storage.buckets (id, name, public) VALUES ('avatars', 'avatars', true);
+### 1. أخطاء فعلية (Bugs)
 
--- سياسات الوصول
-CREATE POLICY "Users can upload own avatar" ON storage.objects
-  FOR INSERT TO authenticated
-  WITH CHECK (bucket_id = 'avatars' AND (storage.foldername(name))[1] = auth.uid()::text);
-```
+**خطأ 400 في لوحة الأدمن:**
+- `AdminDashboard.tsx` يستخدم `profiles:user_id(full_name)` للربط مع `teacher_applications`، لكن لا يوجد Foreign Key بين الجدولين في قاعدة البيانات. النتيجة: خطأ `PGRST200 - Could not find relationship`.
+- **الحل:** إضافة Foreign Keys لجدول `teacher_applications` (user_id -> auth.users, subject_id -> subjects).
 
-**تغييرات الواجهة:**
-- إضافة زر "تغيير الصورة" في `Profile.tsx`
-- معاينة الصورة قبل الرفع
-- ضغط الصورة تلقائياً
+**خطأ 406 في طلب المعلم:**
+- `TeacherApplicationForm` يستخدم `.maybeSingle()` أو `.single()` لجلب طلب الطالب، ويفشل عندما لا يوجد طلب سابق (0 rows).
+- **الحل:** استخدام `.maybeSingle()` بدل `.single()` في `checkExistingApplication`.
+
+**`duration_type` و `duration_value` لا يُحفظان:**
+- في `TeacherPanel.tsx`، عند اقتراح مادة، يتم إدراج السعر في `subject_prices` بدون `duration_type` و `duration_value`.
+- **الحل:** إضافة هذه الحقول عند الإدراج.
 
 ---
 
-### 3️⃣ تحسين جدول المواد وإضافة التفاصيل
-**تغييرات قاعدة البيانات:**
-```sql
--- إضافة أعمدة جديدة للمواد
-ALTER TABLE subjects ADD COLUMN objectives TEXT;  -- أهداف المادة
-ALTER TABLE subjects ADD COLUMN syllabus TEXT;    -- المنهج
+### 2. ميزات ناقصة (Missing Features)
 
--- تحديث جدول الأسعار بمدة الاشتراك
-ALTER TABLE subject_prices ADD COLUMN duration_type TEXT DEFAULT 'semester'; -- semester, month, week, lifetime
-ALTER TABLE subject_prices ADD COLUMN duration_value INTEGER DEFAULT 1;       -- عدد الوحدات
-```
-
----
-
-### 4️⃣ إنشاء صفحة تفاصيل المادة الكاملة
-**ملف جديد: `SubjectDetails.tsx`**
-
-عند الضغط على المادة تظهر صفحة تحتوي على:
-- **معلومات عامة**: اسم المادة، الوصف، المعلم
-- **أهداف المادة**: قائمة بالأهداف التعليمية
-- **تفاصيل الاشتراك**:
-  - المدة (فصل/شهر/أسبوع)
-  - السعر بالنقاط
-  - السعر بالمال (معطل حالياً)
-- **المنهج الدراسي** (اختياري)
-- **زر الاشتراك**
+| الميزة | الحالة | الأهمية |
+|--------|--------|---------|
+| لا توجد جامعات في النظام | فارغة | حرجة |
+| لا يوجد بيانات تجريبية | فارغة | عالية |
+| صفحة "جلساتي" للطلاب | غير موجودة | عالية |
+| تعديل/حذف الجلسة من المعلم | غير موجود | عالية |
+| تعديل المادة المقترحة | غير موجود | متوسطة |
+| إلغاء التسجيل من جلسة | غير مدعوم في UI | متوسطة |
+| نظام نقاط (كسب النقاط) | لا آلية لكسب النقاط | عالية |
+| إشعارات Realtime | لا يوجد subscription | متوسطة |
+| البحث العام (GlobalSearch) | موجود لكن قد يكون غير مكتمل | منخفضة |
 
 ---
 
-### 5️⃣ تحديث صفحة إنشاء/تعديل المادة للمعلم
-**في `TeacherPanel.tsx`:**
-- إضافة حقل "أهداف المادة"
-- إضافة حقل "المنهج الدراسي"
-- اختيار مدة الاشتراك
-- تحديد السعر
+### 3. مشاكل تجربة المستخدم (UX Issues)
+
+- **المعلم لا يرى المشتركين في مادته** - لا يوجد عرض لقائمة الطلاب المشتركين.
+- **لا يوجد زر "تعديل" للجلسة** بعد إنشائها (مثلاً تغيير رابط Zoom).
+- **سعر الجلسة غير واضح الوحدة** - هل بالنقاط أم بالمال؟
+- **الأدمن لا يستطيع إضافة جامعات من الواجهة** - يحتاج صفحة إدارة الجامعات.
+- **الأدمن لا يستطيع إعطاء نقاط للطلاب** من الواجهة.
+- **`CreateSession` يعرض كل المواد** وليس فقط مواد المعلم.
 
 ---
 
-## ملخص الملفات المتأثرة:
+### 4. ثغرات أمنية
+
+- **`CreateSession`** يسمح للمعلم بإنشاء جلسة في أي مادة، وليس فقط المواد التي يدرسها.
+- **RLS لـ `teacher_messages`:** السياسات من نوع `RESTRICTIVE` (No) مما يعني أنها تمنع بدل أن تسمح - هذا سيحجب الوصول تماماً.
+
+---
+
+### 5. خطة الإصلاح المقترحة
+
+**المرحلة 1 - إصلاح الأخطاء الفعلية:**
+1. إضافة Foreign Keys لجدول `teacher_applications`
+2. إصلاح خطأ 406 في `TeacherApplicationForm`
+3. حفظ `duration_type/value` عند اقتراح مادة
+4. تصفية المواد في `CreateSession` لتظهر فقط مواد المعلم
+
+**المرحلة 2 - إضافة بيانات تجريبية:**
+5. إضافة جامعتين تجريبيتين (DB migration)
+6. إضافة أسعار افتراضية للمواد الموجودة
+
+**المرحلة 3 - ميزات مفقودة:**
+7. صفحة "جلساتي" للطلاب (مع countdown ورابط Zoom)
+8. إمكانية تعديل/حذف الجلسة للمعلم
+9. إدارة الجامعات للأدمن (صفحة `UniversitiesManager`)
+10. آلية كسب النقاط (حضور جلسة = +5 نقاط، إكمال اختبار = +10 نقاط)
+
+---
+
+### الملفات المتأثرة
 
 | الملف | التغيير |
 |-------|---------|
-| `profiles` table | إضافة `display_id` |
-| `subjects` table | إضافة `objectives`, `syllabus` |
-| `subject_prices` table | إضافة `duration_type`, `duration_value` |
-| Storage | إنشاء bucket `avatars` |
-| `Profile.tsx` | رفع الصور + عرض ID |
-| `SubjectDetails.tsx` | صفحة جديدة لتفاصيل المادة |
-| `TeacherPanel.tsx` | تحديث فورم إنشاء المادة |
-| `App.tsx` | إضافة route جديد |
+| DB Migration | FK لـ teacher_applications + جامعات تجريبية |
+| `AdminDashboard.tsx` | إصلاح query الربط |
+| `TeacherApplicationForm.tsx` | إصلاح `.single()` |
+| `TeacherPanel.tsx` | حفظ duration عند اقتراح مادة |
+| `CreateSession.tsx` | تصفية المواد حسب المعلم |
+| `Sessions.tsx` | إضافة تعديل/حذف للمعلم |
+| صفحة جديدة `MySessions.tsx` | عرض جلسات الطالب |
 

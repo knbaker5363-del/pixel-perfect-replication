@@ -402,6 +402,75 @@ export default function Auth() {
                 {isLogin ? t.auth.createAccount : t.auth.loginNow}
               </button>
             </div>
+            {/* Demo Testing Panel */}
+            <div className="mt-6 p-4 border border-dashed border-primary/30 rounded-lg bg-primary/5">
+              <p className="text-xs font-semibold text-primary mb-3 text-center">
+                {language === 'ar' ? '🧪 وضع الاختبار' : '🧪 Testing Mode'}
+              </p>
+              
+              {/* Quick Login Buttons */}
+              <div className="grid grid-cols-3 gap-2 mb-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleQuickLogin('admin')}
+                  disabled={isSubmitting}
+                  className="text-xs"
+                >
+                  <Shield className="w-3 h-3 me-1" />
+                  Admin
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleQuickLogin('teacher')}
+                  disabled={isSubmitting}
+                  className="text-xs"
+                >
+                  <UserCheck className="w-3 h-3 me-1" />
+                  Teacher
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleQuickLogin('student')}
+                  disabled={isSubmitting}
+                  className="text-xs"
+                >
+                  <GraduationCap className="w-3 h-3 me-1" />
+                  Student
+                </Button>
+              </div>
+
+              {/* Seed & Reset */}
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleSeedData}
+                  disabled={isSeeding}
+                  className="text-xs"
+                >
+                  {isSeeding ? <Loader2 className="w-3 h-3 animate-spin me-1" /> : <Database className="w-3 h-3 me-1" />}
+                  Seed Demo Data
+                </Button>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleResetData}
+                  disabled={isResettingDemo}
+                  className="text-xs"
+                >
+                  {isResettingDemo ? <Loader2 className="w-3 h-3 animate-spin me-1" /> : <RotateCcw className="w-3 h-3 me-1" />}
+                  Reset Demo Data
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
 

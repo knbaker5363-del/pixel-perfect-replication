@@ -22,6 +22,8 @@ const CreateSession = () => {
   const { user, hasRole } = useAuth();
   const { t, language } = useLanguage();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const editId = searchParams.get('edit');
   const isRTL = language === 'ar';
   const ArrowIcon = isRTL ? ArrowRight : ArrowLeft;
 

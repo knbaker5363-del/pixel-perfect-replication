@@ -41,6 +41,7 @@ const mainNavItems = [
   { title: 'لوحة التحكم', url: '/dashboard', icon: LayoutDashboard },
   { title: 'المواد', url: '/subjects', icon: BookOpen },
   { title: 'الجلسات', url: '/sessions', icon: Calendar },
+  { title: 'جلساتي', url: '/sessions/my', icon: Calendar },
   { title: 'اشتراكاتي', url: '/subscriptions', icon: CreditCard },
   { title: 'الاختبارات', url: '/quizzes', icon: ClipboardList },
   { title: 'الرسائل', url: '/messages', icon: MessageCircle },

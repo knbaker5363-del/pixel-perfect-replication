@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -22,6 +22,8 @@ const CreateSession = () => {
   const { user, hasRole } = useAuth();
   const { t, language } = useLanguage();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const editId = searchParams.get('edit');
   const isRTL = language === 'ar';
   const ArrowIcon = isRTL ? ArrowRight : ArrowLeft;
 
@@ -43,20 +45,63 @@ const CreateSession = () => {
 
   useEffect(() => {
     const fetchSubjects = async () => {
-      const { data, error } = await supabase
+      if (!user) return;
+      
+      // Get subjects proposed by this teacher OR subjects they have sessions in
+      const { data: proposedSubjects } = await supabase
         .from('subjects')
         .select('id, name')
         .eq('status', 'approved')
-        .order('name');
+        .eq('proposed_by', user.id);
 
-      if (!error && data) {
-        setSubjects(data);
+      const { data: sessionSubjects } = await supabase
+        .from('sessions')
+        .select('subject_id')
+        .eq('teacher_id', user.id);
+
+      const sessionSubjectIds = [...new Set(sessionSubjects?.map(s => s.subject_id) || [])];
+      
+      let additionalSubjects: Subject[] = [];
+      if (sessionSubjectIds.length > 0) {
+        const { data } = await supabase
+          .from('subjects')
+          .select('id, name')
+          .in('id', sessionSubjectIds)
+          .eq('status', 'approved');
+        additionalSubjects = data || [];
       }
+
+      // Merge and deduplicate
+      const allSubjects = [...(proposedSubjects || []), ...additionalSubjects];
+      const unique = Array.from(new Map(allSubjects.map(s => [s.id, s])).values());
+      setSubjects(unique);
       setLoadingSubjects(false);
     };
 
     fetchSubjects();
-  }, []);
+  }, [user]);
+
+  // Load session data for editing
+  useEffect(() => {
+    if (!editId) return;
+    const loadSession = async () => {
+      const { data } = await supabase.from('sessions').select('*').eq('id', editId).maybeSingle();
+      if (data) {
+        setFormData({
+          title: data.title,
+          description: data.description || '',
+          subject_id: data.subject_id,
+          scheduled_at: data.scheduled_at ? new Date(data.scheduled_at).toISOString().slice(0, 16) : '',
+          duration_minutes: data.duration_minutes || 60,
+          price: data.price || 0,
+          is_free: data.is_free || false,
+          max_students: data.max_students || 20,
+          zoom_link: data.zoom_link || '',
+        });
+      }
+    };
+    loadSession();
+  }, [editId]);
 
   const isTeacher = hasRole('teacher') || hasRole('admin');
 
@@ -88,7 +133,7 @@ const CreateSession = () => {
 
     setLoading(true);
 
-    const { error } = await supabase.from('sessions').insert({
+    const sessionData = {
       title: formData.title,
       description: formData.description || null,
       subject_id: formData.subject_id,
@@ -99,15 +144,24 @@ const CreateSession = () => {
       is_free: formData.is_free,
       max_students: formData.max_students,
       zoom_link: formData.zoom_link || null,
-    });
+    };
+
+    let error;
+    if (editId) {
+      ({ error } = await supabase.from('sessions').update(sessionData).eq('id', editId));
+    } else {
+      ({ error } = await supabase.from('sessions').insert(sessionData));
+    }
 
     setLoading(false);
 
     if (error) {
-      toast.error(language === 'ar' ? 'حدث خطأ أثناء إنشاء الجلسة' : 'Error creating session');
+      toast.error(language === 'ar' ? 'حدث خطأ' : 'Error saving session');
       console.error(error);
     } else {
-      toast.success(language === 'ar' ? 'تم إنشاء الجلسة بنجاح' : 'Session created successfully');
+      toast.success(language === 'ar' 
+        ? (editId ? 'تم تحديث الجلسة بنجاح' : 'تم إنشاء الجلسة بنجاح')
+        : (editId ? 'Session updated' : 'Session created'));
       navigate('/sessions');
     }
   };
@@ -121,7 +175,10 @@ const CreateSession = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle>{language === 'ar' ? 'إنشاء جلسة جديدة' : 'Create New Session'}</CardTitle>
+          <CardTitle>{editId 
+            ? (language === 'ar' ? 'تعديل الجلسة' : 'Edit Session')
+            : (language === 'ar' ? 'إنشاء جلسة جديدة' : 'Create New Session')
+          }</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -251,10 +308,12 @@ const CreateSession = () => {
               {loading ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin mx-2" />
-                  {language === 'ar' ? 'جاري الإنشاء...' : 'Creating...'}
+                  {language === 'ar' ? 'جاري الحفظ...' : 'Saving...'}
                 </>
               ) : (
-                language === 'ar' ? 'إنشاء الجلسة' : 'Create Session'
+                editId 
+                  ? (language === 'ar' ? 'حفظ التعديلات' : 'Save Changes')
+                  : (language === 'ar' ? 'إنشاء الجلسة' : 'Create Session')
               )}
             </Button>
           </form>

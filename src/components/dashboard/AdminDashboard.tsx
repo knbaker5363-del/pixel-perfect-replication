@@ -91,15 +91,28 @@ export function AdminDashboard() {
       // Fetch pending applications with details
       const { data: applicationsData } = await supabase
         .from('teacher_applications')
-        .select(`
-          *,
-          profiles:user_id(full_name),
-          subjects:subject_id(name)
-        `)
+        .select('*')
         .eq('status', 'pending')
         .order('created_at', { ascending: false });
 
-      setApplications((applicationsData as unknown as TeacherApplication[]) || []);
+      if (applicationsData && applicationsData.length > 0) {
+        const userIds = applicationsData.map(a => a.user_id);
+        const subjectIds = applicationsData.map(a => a.subject_id);
+        
+        const [{ data: profiles }, { data: subjectsData }] = await Promise.all([
+          supabase.from('profiles').select('user_id, full_name').in('user_id', userIds),
+          supabase.from('subjects').select('id, name').in('id', subjectIds),
+        ]);
+
+        const appsWithDetails = applicationsData.map(app => ({
+          ...app,
+          profiles: profiles?.find(p => p.user_id === app.user_id) || null,
+          subjects: subjectsData?.find(s => s.id === app.subject_id) || null,
+        }));
+        setApplications(appsWithDetails as TeacherApplication[]);
+      } else {
+        setApplications([]);
+      }
 
       // Fetch pending subject proposals
       const { data: proposalsData } = await supabase

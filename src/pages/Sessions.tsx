@@ -3,7 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Calendar, Clock, Users, Video, Plus, Star, ExternalLink } from 'lucide-react';
+import { Calendar, Clock, Users, Video, Plus, Star, ExternalLink, Pencil, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -217,6 +217,18 @@ export default function Sessions() {
     fetchData();
   };
 
+  const handleDeleteSession = async (sessionId: string) => {
+    if (!confirm(language === 'ar' ? 'هل أنت متأكد من حذف هذه الجلسة؟' : 'Are you sure you want to delete this session?')) return;
+    
+    const { error } = await supabase.from('sessions').delete().eq('id', sessionId);
+    if (error) {
+      toast.error(language === 'ar' ? 'حدث خطأ أثناء الحذف' : 'Error deleting session');
+    } else {
+      toast.success(language === 'ar' ? 'تم حذف الجلسة' : 'Session deleted');
+      fetchData();
+    }
+  };
+
   const isTeacher = hasRole('teacher');
 
   const canJoinSession = (session: Session) => {
@@ -337,6 +349,17 @@ export default function Sessions() {
                       <Badge variant="secondary" className="text-sm px-4 py-2">
                         {text.yourSession}
                       </Badge>
+                      <div className="flex gap-1">
+                        <Button variant="outline" size="sm" asChild>
+                          <Link to={`/sessions/create?edit=${session.id}`}>
+                            <Pencil className="w-3 h-3 me-1" />
+                            {language === 'ar' ? 'تعديل' : 'Edit'}
+                          </Link>
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => handleDeleteSession(session.id)}>
+                          <Trash2 className="w-3 h-3 me-1 text-destructive" />
+                        </Button>
+                      </div>
                       {showJoinButton && (
                         <Button asChild variant="outline" size="sm">
                           <a href={session.zoom_link!} target="_blank" rel="noopener noreferrer">

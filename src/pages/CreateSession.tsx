@@ -133,7 +133,7 @@ const CreateSession = () => {
 
     setLoading(true);
 
-    const { error } = await supabase.from('sessions').insert({
+    const sessionData = {
       title: formData.title,
       description: formData.description || null,
       subject_id: formData.subject_id,
@@ -144,15 +144,24 @@ const CreateSession = () => {
       is_free: formData.is_free,
       max_students: formData.max_students,
       zoom_link: formData.zoom_link || null,
-    });
+    };
+
+    let error;
+    if (editId) {
+      ({ error } = await supabase.from('sessions').update(sessionData).eq('id', editId));
+    } else {
+      ({ error } = await supabase.from('sessions').insert(sessionData));
+    }
 
     setLoading(false);
 
     if (error) {
-      toast.error(language === 'ar' ? 'حدث خطأ أثناء إنشاء الجلسة' : 'Error creating session');
+      toast.error(language === 'ar' ? 'حدث خطأ' : 'Error saving session');
       console.error(error);
     } else {
-      toast.success(language === 'ar' ? 'تم إنشاء الجلسة بنجاح' : 'Session created successfully');
+      toast.success(language === 'ar' 
+        ? (editId ? 'تم تحديث الجلسة بنجاح' : 'تم إنشاء الجلسة بنجاح')
+        : (editId ? 'Session updated' : 'Session created'));
       navigate('/sessions');
     }
   };

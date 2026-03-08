@@ -43,20 +43,41 @@ const CreateSession = () => {
 
   useEffect(() => {
     const fetchSubjects = async () => {
-      const { data, error } = await supabase
+      if (!user) return;
+      
+      // Get subjects proposed by this teacher OR subjects they have sessions in
+      const { data: proposedSubjects } = await supabase
         .from('subjects')
         .select('id, name')
         .eq('status', 'approved')
-        .order('name');
+        .eq('proposed_by', user.id);
 
-      if (!error && data) {
-        setSubjects(data);
+      const { data: sessionSubjects } = await supabase
+        .from('sessions')
+        .select('subject_id')
+        .eq('teacher_id', user.id);
+
+      const sessionSubjectIds = [...new Set(sessionSubjects?.map(s => s.subject_id) || [])];
+      
+      let additionalSubjects: Subject[] = [];
+      if (sessionSubjectIds.length > 0) {
+        const { data } = await supabase
+          .from('subjects')
+          .select('id, name')
+          .in('id', sessionSubjectIds)
+          .eq('status', 'approved');
+        additionalSubjects = data || [];
       }
+
+      // Merge and deduplicate
+      const allSubjects = [...(proposedSubjects || []), ...additionalSubjects];
+      const unique = Array.from(new Map(allSubjects.map(s => [s.id, s])).values());
+      setSubjects(unique);
       setLoadingSubjects(false);
     };
 
     fetchSubjects();
-  }, []);
+  }, [user]);
 
   const isTeacher = hasRole('teacher') || hasRole('admin');
 

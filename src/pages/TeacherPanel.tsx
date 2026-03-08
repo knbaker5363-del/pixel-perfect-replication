@@ -196,6 +196,8 @@ export default function TeacherPanel() {
           subject_id: subjectData.id,
           points_price: newSubject.points_price,
           is_free: newSubject.points_price === 0,
+          duration_type: newSubject.duration_type,
+          duration_value: newSubject.duration_value,
         });
 
         // Update subject with objectives/syllabus (using raw update since types may not be regenerated yet)

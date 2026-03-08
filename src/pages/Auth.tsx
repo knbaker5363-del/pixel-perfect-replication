@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { toast } from 'sonner';
-import { GraduationCap, Loader2, BookOpen, Calendar, Trophy, Video, Users, Coins, Star, Check } from 'lucide-react';
+import { GraduationCap, Loader2, BookOpen, Calendar, Trophy, Video, Users, Coins, Star, Check, Shield, UserCheck, GraduationCap as StudentIcon, RotateCcw, Database } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import {
   Select,
@@ -33,6 +33,8 @@ export default function Auth() {
   const [universities, setUniversities] = useState<University[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isResettingPassword, setIsResettingPassword] = useState(false);
+  const [isSeeding, setIsSeeding] = useState(false);
+  const [isResettingDemo, setIsResettingDemo] = useState(false);
   const { signIn, signUp, user, loading } = useAuth();
   const { t, isRTL, language } = useLanguage();
   const navigate = useNavigate();
@@ -143,6 +145,59 @@ export default function Auth() {
       );
     }
     setIsResettingPassword(false);
+  };
+
+  const handleQuickLogin = async (role: 'admin' | 'teacher' | 'student') => {
+    const credentials: Record<string, { email: string; password: string }> = {
+      admin: { email: 'admin@admin.com', password: 'Admin123!' },
+      teacher: { email: 'teacher1@test.com', password: 'Test123!' },
+      student: { email: 'student1@test.com', password: 'Test123!' },
+    };
+    const cred = credentials[role];
+    setIsSubmitting(true);
+    try {
+      const { error } = await signIn(cred.email, cred.password);
+      if (error) {
+        toast.error(language === 'ar' ? `فشل الدخول كـ ${role}. تأكد من تشغيل Seed Demo Data أولاً` : `Login as ${role} failed. Run Seed Demo Data first.`);
+      } else {
+        toast.success(language === 'ar' ? `تم الدخول كـ ${role}` : `Logged in as ${role}`);
+        navigate('/dashboard');
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleSeedData = async () => {
+    setIsSeeding(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('seed-demo-data', {
+        body: { action: 'seed' },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success(language === 'ar' ? 'تم إنشاء البيانات التجريبية بنجاح!' : 'Demo data seeded successfully!');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to seed data');
+    } finally {
+      setIsSeeding(false);
+    }
+  };
+
+  const handleResetData = async () => {
+    setIsResettingDemo(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('seed-demo-data', {
+        body: { action: 'reset' },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success(language === 'ar' ? 'تم إعادة تعيين البيانات التجريبية!' : 'Demo data reset!');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to reset data');
+    } finally {
+      setIsResettingDemo(false);
+    }
   };
 
   if (loading) {
@@ -346,6 +401,75 @@ export default function Auth() {
               >
                 {isLogin ? t.auth.createAccount : t.auth.loginNow}
               </button>
+            </div>
+            {/* Demo Testing Panel */}
+            <div className="mt-6 p-4 border border-dashed border-primary/30 rounded-lg bg-primary/5">
+              <p className="text-xs font-semibold text-primary mb-3 text-center">
+                {language === 'ar' ? '🧪 وضع الاختبار' : '🧪 Testing Mode'}
+              </p>
+              
+              {/* Quick Login Buttons */}
+              <div className="grid grid-cols-3 gap-2 mb-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleQuickLogin('admin')}
+                  disabled={isSubmitting}
+                  className="text-xs"
+                >
+                  <Shield className="w-3 h-3 me-1" />
+                  Admin
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleQuickLogin('teacher')}
+                  disabled={isSubmitting}
+                  className="text-xs"
+                >
+                  <UserCheck className="w-3 h-3 me-1" />
+                  Teacher
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleQuickLogin('student')}
+                  disabled={isSubmitting}
+                  className="text-xs"
+                >
+                  <GraduationCap className="w-3 h-3 me-1" />
+                  Student
+                </Button>
+              </div>
+
+              {/* Seed & Reset */}
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleSeedData}
+                  disabled={isSeeding}
+                  className="text-xs"
+                >
+                  {isSeeding ? <Loader2 className="w-3 h-3 animate-spin me-1" /> : <Database className="w-3 h-3 me-1" />}
+                  Seed Demo Data
+                </Button>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleResetData}
+                  disabled={isResettingDemo}
+                  className="text-xs"
+                >
+                  {isResettingDemo ? <Loader2 className="w-3 h-3 animate-spin me-1" /> : <RotateCcw className="w-3 h-3 me-1" />}
+                  Reset Demo Data
+                </Button>
+              </div>
             </div>
           </div>
         </div>

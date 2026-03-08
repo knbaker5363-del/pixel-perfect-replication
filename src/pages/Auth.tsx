@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { toast } from 'sonner';
-import { GraduationCap, Loader2, BookOpen, Calendar, Trophy, Video, Users, Coins, Star, Check } from 'lucide-react';
+import { GraduationCap, Loader2, BookOpen, Calendar, Trophy, Video, Users, Coins, Star, Check, Shield, UserCheck, GraduationCap as StudentIcon, RotateCcw, Database } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import {
   Select,

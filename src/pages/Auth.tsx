@@ -147,6 +147,59 @@ export default function Auth() {
     setIsResettingPassword(false);
   };
 
+  const handleQuickLogin = async (role: 'admin' | 'teacher' | 'student') => {
+    const credentials: Record<string, { email: string; password: string }> = {
+      admin: { email: 'admin@admin.com', password: 'Admin123!' },
+      teacher: { email: 'teacher1@test.com', password: 'Test123!' },
+      student: { email: 'student1@test.com', password: 'Test123!' },
+    };
+    const cred = credentials[role];
+    setIsSubmitting(true);
+    try {
+      const { error } = await signIn(cred.email, cred.password);
+      if (error) {
+        toast.error(language === 'ar' ? `فشل الدخول كـ ${role}. تأكد من تشغيل Seed Demo Data أولاً` : `Login as ${role} failed. Run Seed Demo Data first.`);
+      } else {
+        toast.success(language === 'ar' ? `تم الدخول كـ ${role}` : `Logged in as ${role}`);
+        navigate('/dashboard');
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleSeedData = async () => {
+    setIsSeeding(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('seed-demo-data', {
+        body: { action: 'seed' },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success(language === 'ar' ? 'تم إنشاء البيانات التجريبية بنجاح!' : 'Demo data seeded successfully!');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to seed data');
+    } finally {
+      setIsSeeding(false);
+    }
+  };
+
+  const handleResetData = async () => {
+    setIsResettingDemo(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('seed-demo-data', {
+        body: { action: 'reset' },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success(language === 'ar' ? 'تم إعادة تعيين البيانات التجريبية!' : 'Demo data reset!');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to reset data');
+    } finally {
+      setIsResettingDemo(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">

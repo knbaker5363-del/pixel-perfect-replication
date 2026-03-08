@@ -308,10 +308,12 @@ const CreateSession = () => {
               {loading ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin mx-2" />
-                  {language === 'ar' ? 'جاري الإنشاء...' : 'Creating...'}
+                  {language === 'ar' ? 'جاري الحفظ...' : 'Saving...'}
                 </>
               ) : (
-                language === 'ar' ? 'إنشاء الجلسة' : 'Create Session'
+                editId 
+                  ? (language === 'ar' ? 'حفظ التعديلات' : 'Save Changes')
+                  : (language === 'ar' ? 'إنشاء الجلسة' : 'Create Session')
               )}
             </Button>
           </form>

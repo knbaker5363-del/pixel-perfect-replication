@@ -2,3 +2,9 @@ project_id = "nlokptefjthdfzxfnrxm"
 
 [functions.admin-add-teacher]
 verify_jwt = false
+
+[functions.seed-demo-data]
+verify_jwt = false
+
+[functions.create-admin]
+verify_jwt = false

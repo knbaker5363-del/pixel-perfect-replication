@@ -217,6 +217,18 @@ export default function Sessions() {
     fetchData();
   };
 
+  const handleDeleteSession = async (sessionId: string) => {
+    if (!confirm(language === 'ar' ? 'هل أنت متأكد من حذف هذه الجلسة؟' : 'Are you sure you want to delete this session?')) return;
+    
+    const { error } = await supabase.from('sessions').delete().eq('id', sessionId);
+    if (error) {
+      toast.error(language === 'ar' ? 'حدث خطأ أثناء الحذف' : 'Error deleting session');
+    } else {
+      toast.success(language === 'ar' ? 'تم حذف الجلسة' : 'Session deleted');
+      fetchData();
+    }
+  };
+
   const isTeacher = hasRole('teacher');
 
   const canJoinSession = (session: Session) => {

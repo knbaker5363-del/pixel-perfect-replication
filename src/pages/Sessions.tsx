@@ -349,6 +349,17 @@ export default function Sessions() {
                       <Badge variant="secondary" className="text-sm px-4 py-2">
                         {text.yourSession}
                       </Badge>
+                      <div className="flex gap-1">
+                        <Button variant="outline" size="sm" asChild>
+                          <Link to={`/sessions/create?edit=${session.id}`}>
+                            <Pencil className="w-3 h-3 me-1" />
+                            {language === 'ar' ? 'تعديل' : 'Edit'}
+                          </Link>
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => handleDeleteSession(session.id)}>
+                          <Trash2 className="w-3 h-3 me-1 text-destructive" />
+                        </Button>
+                      </div>
                       {showJoinButton && (
                         <Button asChild variant="outline" size="sm">
                           <a href={session.zoom_link!} target="_blank" rel="noopener noreferrer">

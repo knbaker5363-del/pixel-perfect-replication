@@ -29,6 +29,7 @@ import CreateQuiz from "@/pages/CreateQuiz";
 import TakeQuiz from "@/pages/TakeQuiz";
 import MySubscriptions from "@/pages/MySubscriptions";
 import SubjectDetails from "@/pages/SubjectDetails";
+import MySessions from "@/pages/MySessions";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();

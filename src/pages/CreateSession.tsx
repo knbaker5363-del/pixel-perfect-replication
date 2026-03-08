@@ -175,7 +175,10 @@ const CreateSession = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle>{language === 'ar' ? 'إنشاء جلسة جديدة' : 'Create New Session'}</CardTitle>
+          <CardTitle>{editId 
+            ? (language === 'ar' ? 'تعديل الجلسة' : 'Edit Session')
+            : (language === 'ar' ? 'إنشاء جلسة جديدة' : 'Create New Session')
+          }</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">

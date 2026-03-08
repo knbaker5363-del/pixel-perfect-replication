@@ -33,6 +33,8 @@ export default function Auth() {
   const [universities, setUniversities] = useState<University[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isResettingPassword, setIsResettingPassword] = useState(false);
+  const [isSeeding, setIsSeeding] = useState(false);
+  const [isResettingDemo, setIsResettingDemo] = useState(false);
   const { signIn, signUp, user, loading } = useAuth();
   const { t, isRTL, language } = useLanguage();
   const navigate = useNavigate();

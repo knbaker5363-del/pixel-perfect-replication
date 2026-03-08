@@ -81,6 +81,28 @@ const CreateSession = () => {
     fetchSubjects();
   }, [user]);
 
+  // Load session data for editing
+  useEffect(() => {
+    if (!editId) return;
+    const loadSession = async () => {
+      const { data } = await supabase.from('sessions').select('*').eq('id', editId).maybeSingle();
+      if (data) {
+        setFormData({
+          title: data.title,
+          description: data.description || '',
+          subject_id: data.subject_id,
+          scheduled_at: data.scheduled_at ? new Date(data.scheduled_at).toISOString().slice(0, 16) : '',
+          duration_minutes: data.duration_minutes || 60,
+          price: data.price || 0,
+          is_free: data.is_free || false,
+          max_students: data.max_students || 20,
+          zoom_link: data.zoom_link || '',
+        });
+      }
+    };
+    loadSession();
+  }, [editId]);
+
   const isTeacher = hasRole('teacher') || hasRole('admin');
 
   if (!isTeacher) {
